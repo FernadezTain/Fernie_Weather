@@ -1,0 +1,2096 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Fernie Погода</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#1a1a1f;
+  --bg2:#222228;
+  --bg3:#2a2a32;
+  --bg4:#313138;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,0.5);
+  --muted2:rgba(255,255,255,0.3);
+  --border:rgba(255,255,255,0.07);
+  --accent:#fc3f1d;
+  --green:#4caf50;
+  --yellow:#f5a623;
+  --radius:22px;
+  --radius-sm:16px;
+}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  min-height:100vh;
+  overflow-x:hidden;
+  max-width:100vw;
+}
+a{color:inherit;text-decoration:none;}
+
+/* ===== MOBILE ===== */
+@media screen and (max-width:768px){
+  .sidebar{display:none!important;}
+  .main{margin-left:0!important;width:100%;}
+  .layout{overflow-x:hidden;}
+  .topbar{padding:0 12px;gap:8px;width:100%;}
+  .search-box{max-width:none;flex:1;}
+  .content{padding:10px;width:100%;box-sizing:border-box;}
+
+  /* HERO */
+  .hero-card{padding:14px;}
+  .hero-top{margin-bottom:12px;}
+  .hero-main{gap:10px;flex-wrap:wrap;margin-bottom:8px;}
+  .hero-temp{font-size:52px;letter-spacing:-2px;}
+  .hero-icon{font-size:36px;}
+  .hero-cond{font-size:13px;}
+  .hero-feels{font-size:12px;}
+  .hero-stats{gap:8px;flex-wrap:wrap;}
+  .hero-stat{font-size:11px;}
+
+  /* ALERTS */
+  .alerts{flex-direction:column;gap:8px;}
+  .alert-card{padding:12px 14px;}
+
+  /* HOURLY */
+  .hourly-card{padding:10px;}
+  .hour-col{padding:10px 10px;min-width:56px;}
+
+  /* WELLBEING */
+  .wellbeing-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+  .wb-card{min-width:0;padding:12px;}
+  .wb-gauge{width:44px;height:44px;}
+
+  /* FORECAST */
+  .forecast-card{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .forecast-grid{display:flex;width:max-content;min-width:100%;}
+  .fc-day-col{padding:10px 10px;min-width:80px;flex-shrink:0;}
+  .fc-hi{font-size:13px;}
+  .fc-lo{font-size:11px;}
+  .fc-wicon{font-size:20px;}
+  .fc-weekday{font-size:10px;}
+  .fc-date{font-size:12px;margin-bottom:6px;}
+  .fc-chart{overflow-x:hidden;}
+
+  /* DETAIL GRID */
+  .detail-grid{grid-template-columns:1fr;}
+
+  /* DAY-BY-DAY */
+  .daybyday-card{padding:12px;overflow-x:auto;}
+  .dbd-table{font-size:11px;min-width:480px;}
+  .dbd-table th,.dbd-table td{padding:6px 4px 6px 0;}
+  .dbd-date{font-size:14px;}
+
+  /* GEOMAG */
+  .geomag-card{padding:14px;}
+  .geomag-hours{gap:2px;}
+  .geomag-bar-wrap{min-width:28px;}
+  .geomag-bar{height:24px;font-size:10px;}
+
+  /* UV */
+  .uv-card{padding:14px;}
+  .uv-hours{
+    gap:2px;
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+    padding-bottom:4px;
+  }
+  .uv-hours::-webkit-scrollbar{display:none;}
+  .uv-hour-item{flex-shrink:0;min-width:36px;}
+  .uv-hour-time{font-size:9px;}
+  .uv-hour-val{font-size:11px;}
+
+  /* SEC TITLE */
+  .sec-title{font-size:16px;margin-bottom:10px;}
+
+  /* DETAIL PAGES */
+  .detail-page-body{padding:10px;}
+  .detail-page-topbar{padding:0 12px;}
+  .detail-page-title{font-size:14px;}
+
+  /* Inline grid overrides для detail-страниц */
+  .detail-page-body > div[style*="grid"],
+  .detail-page-body > div > div[style*="grid-template-columns:1fr 1fr"]{
+    display:flex!important;flex-direction:column!important;gap:10px!important;
+  }
+}
+
+/* LAYOUT */
+.layout{display:flex;min-height:100vh;}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;
+  flex-shrink:0;
+  background:var(--bg);
+  border-right:1px solid var(--border);
+  padding:20px 0;
+  display:flex;
+  flex-direction:column;
+  position:fixed;
+  top:0;bottom:0;left:0;
+  z-index:10;
+}
+.logo{
+  display:flex;align-items:center;gap:10px;
+  padding:0 20px 24px;
+  font-size:20px;font-weight:700;
+}
+.logo-icon{
+  width:36px;height:36px;background:var(--accent);
+  border-radius:8px;display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:900;color:#fff;
+}
+.nav-item{
+  padding:10px 20px;
+  font-size:14px;
+  cursor:pointer;
+  border-radius:0;
+  color:var(--muted);
+  transition:color 0.15s,background 0.15s;
+}
+.nav-item:hover{color:#fff;background:rgba(255,255,255,0.05);}
+.nav-item.active{color:#fff;background:rgba(255,255,255,0.08);font-weight:500;}
+.sidebar-bottom{margin-top:auto;padding:20px;font-size:12px;color:var(--muted2);}
+
+/* BOTTOM NAV (mobile only) */
+.bottom-nav{
+  display:none;
+  position:fixed;bottom:0;left:0;right:0;
+  z-index:200;
+  padding:12px 24px calc(12px + env(safe-area-inset-bottom,0px));
+  pointer-events:none;
+}
+.bottom-nav-inner{
+  display:flex;justify-content:space-around;align-items:center;
+  background:rgba(26,26,31,0.7);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:40px;
+  padding:6px;
+  pointer-events:all;
+  box-shadow:0 8px 40px rgba(0,0,0,0.5);
+  position:relative;
+}
+/* скользящий шарик */
+.bn-pill{
+  position:absolute;
+  top:6px;bottom:6px;
+  background:var(--accent);
+  border-radius:32px;
+  transition:left 0.35s cubic-bezier(.4,0,.2,1), width 0.35s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 4px 20px rgba(252,63,29,0.5);
+  pointer-events:none;
+  z-index:0;
+}
+.bn-item{
+  display:flex;flex-direction:column;align-items:center;
+  gap:2px;padding:10px 20px;
+  font-size:11px;color:var(--muted);
+  cursor:pointer;border:none;background:none;
+  transition:color 0.25s ease;
+  border-radius:32px;
+  position:relative;
+  z-index:1;
+  white-space:nowrap;
+  flex:1;
+}
+.bn-item.active{color:#fff;font-weight:600;}
+.bn-icon{font-size:18px;line-height:1;margin-bottom:2px;display:block;}
+.bn-label{font-size:10px;letter-spacing:0.2px;}
+@media(max-width:768px){
+  .bottom-nav{display:block;}
+  .main{padding-bottom:90px;}
+}
+
+/* MAIN */
+.main{
+  margin-left:220px;
+  flex:1;
+  min-height:100vh;
+}
+
+/* TOPBAR */
+.topbar{
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  padding:0 24px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  position:sticky;top:0;z-index:9;
+}
+.search-box{
+  flex:1;max-width:400px;
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg2);
+  border:1px solid var(--border);
+  border-radius:50px;
+  padding:8px 16px;
+  cursor:pointer;
+}
+.search-box input{
+  background:none;border:none;outline:none;
+  color:#fff;font-size:14px;font-family:'Inter',sans-serif;
+  flex:1;
+}
+.search-box input::placeholder{color:var(--muted);}
+.search-btn{
+  background:var(--bg3);border:1px solid var(--border);
+  color:#fff;border-radius:50px;padding:8px 18px;
+  font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
+  transition:background 0.15s;
+}
+.search-btn:hover{background:var(--bg4);}
+.locate-btn{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:50px;padding:8px 14px;
+  font-size:13px;cursor:pointer;color:var(--muted);
+  transition:color 0.15s;
+}
+.locate-btn:hover{color:#fff;}
+
+/* CONTENT */
+.content{padding:24px;}
+
+/* HERO */
+.hero-card{
+  background:var(--bg2);
+  border-radius:var(--radius);
+  padding:24px 28px;
+  margin-bottom:16px;
+  border:1px solid var(--border);
+}
+.hero-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.hero-city{font-size:13px;color:var(--muted);margin-bottom:4px;}
+.hero-main{display:flex;align-items:center;gap:20px;margin-bottom:12px;}
+.hero-temp{font-size:80px;font-weight:300;line-height:1;letter-spacing:-3px;}
+.hero-icon-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;}
+.hero-icon{font-size:56px;line-height:1;}
+.hero-cond{font-size:16px;font-weight:500;margin-bottom:4px;}
+.hero-feels{font-size:13px;color:var(--muted);}
+.hero-stats{
+  display:flex;gap:20px;
+  padding-top:16px;
+  border-top:1px solid var(--border);
+  flex-wrap:wrap;
+}
+.hero-stat{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);}
+.hero-stat strong{color:#fff;font-weight:500;}
+
+/* ALERTS */
+.alerts{display:flex;gap:12px;margin-bottom:16px;}
+.alert-card{
+  flex:1;border-radius:var(--radius);padding:16px 18px;
+  display:flex;gap:12px;align-items:flex-start;
+}
+.alert-card.pollen{background:#1a2e1a;border:1px solid #2d4a2d;}
+.alert-card.danger{background:#2a2010;border:1px solid #4a3820;}
+.alert-icon{font-size:20px;flex-shrink:0;margin-top:2px;}
+.alert-title{font-size:14px;font-weight:600;margin-bottom:4px;}
+.alert-pollen{color:#5cb85c;}
+.alert-danger-text{color:#f5a623;}
+.alert-desc{font-size:12px;color:var(--muted);line-height:1.5;}
+
+/* SECTION TITLE */
+.sec-title{font-size:18px;font-weight:600;margin-bottom:14px;}
+
+/* HOURLY */
+.hourly-card{
+  background:var(--bg2);
+  border-radius:var(--radius);
+  padding:20px;
+  margin-bottom:16px;
+  border:1px solid var(--border);
+}
+.hourly-scroll{
+  display:flex;gap:4px;
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.hourly-scroll::-webkit-scrollbar{display:none;}
+.hour-col{
+  flex-shrink:0;
+  display:flex;flex-direction:column;align-items:center;
+  gap:8px;
+  padding:12px 14px;
+  border-radius:var(--radius-sm);
+  min-width:64px;
+  transition:background 0.15s;
+}
+.hour-col:hover{background:var(--bg3);}
+.hour-col.now{background:var(--bg3);border:1px solid var(--border);}
+.hour-col.special{background:transparent;}
+.hour-time{font-size:12px;color:var(--muted);}
+.hour-icon{font-size:22px;}
+.hour-temp{font-size:14px;font-weight:500;}
+.hour-event{font-size:11px;color:var(--yellow);}
+
+/* WELLBEING */
+.wellbeing-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.wb-card{
+  flex:1;min-width:140px;
+  background:var(--bg2);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  padding:16px;
+  display:flex;align-items:center;gap:14px;
+  cursor:pointer;
+  transition:background 0.15s;
+}
+.wb-card:hover{background:var(--bg3);}
+.wb-gauge{position:relative;width:52px;height:52px;flex-shrink:0;}
+.wb-gauge svg{width:100%;height:100%;}
+.wb-gauge-val{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:600;
+}
+.wb-info{display:block;}
+.wb-label{font-size:11px;color:var(--muted);margin-bottom:2px;}
+.wb-value{font-size:14px;font-weight:500;}
+.wb-sub{font-size:12px;color:var(--muted);}
+
+/* 10-DAY */
+.forecast-card{
+  background:var(--bg2);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  margin-bottom:16px;
+  overflow:hidden;
+}
+.forecast-header{padding:20px 20px 0;margin-bottom:0;}
+.forecast-grid{
+  display:grid;
+  grid-template-columns:repeat(10,1fr);
+  gap:0;
+}
+.fc-day-col{
+  padding:14px 8px;
+  text-align:center;
+  border-right:1px solid var(--border);
+  cursor:pointer;
+  transition:background 0.15s;
+}
+.fc-day-col:last-child{border-right:none;}
+.fc-day-col:hover{background:var(--bg3);}
+.fc-day-col.today{background:rgba(255,255,255,0.04);}
+.fc-weekday{font-size:12px;color:var(--muted);margin-bottom:2px;}
+.fc-weekday.red{color:#e05555;}
+.fc-date{font-size:13px;font-weight:500;margin-bottom:10px;}
+.fc-wicon{font-size:24px;margin-bottom:8px;}
+.fc-hi{font-size:16px;font-weight:600;margin-bottom:2px;}
+.fc-lo{font-size:12px;color:var(--muted);}
+/* chart line */
+.fc-chart{padding:0 0 16px;position:relative;height:70px;}
+.fc-chart svg{width:100%;height:100%;}
+
+/* DETAILED */
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+.detail-card{
+  background:var(--bg2);
+  border-radius:var(--radius);
+  border:1px solid var(--border);
+  padding:20px;
+}
+.detail-title{font-size:16px;font-weight:600;margin-bottom:14px;}
+.detail-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:10px 0;
+  border-bottom:1px solid var(--border);
+  font-size:13px;
+}
+.detail-row:last-child{border-bottom:none;}
+.detail-row .lbl{color:var(--muted);}
+.detail-row .val{font-weight:500;}
+.detail-row .val.green{color:var(--green);}
+.detail-row .val.yellow{color:var(--yellow);}
+.detail-row .val.red{color:#e05555;}
+
+/* PRESSURE CHART */
+.pressure-chart-wrap{height:80px;margin-top:8px;}
+
+/* GEOMAG */
+.geomag-card{
+  background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);padding:20px;
+  margin-bottom:16px;
+}
+.geomag-days{display:flex;flex-direction:column;gap:12px;margin-top:12px;}
+.geomag-day-label{font-size:13px;font-weight:500;margin-bottom:8px;}
+.geomag-hours{display:flex;gap:4px;align-items:flex-end;}
+.geomag-bar-wrap{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  flex:1;
+}
+.geomag-val{font-size:11px;color:var(--muted);}
+.geomag-bar{
+  height:32px;width:100%;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:600;
+}
+.gm-calm{background:#3a3a3a;color:var(--muted);}
+.gm-weak{background:#4a3a10;color:#f5a623;}
+.gm-moderate{background:#4a2010;color:#f08030;}
+.geomag-time{font-size:10px;color:var(--muted2);}
+.geomag-legend{
+  display:flex;gap:12px;flex-wrap:wrap;
+  margin-top:12px;font-size:11px;color:var(--muted);
+}
+.legend-dot{
+  display:inline-block;width:8px;height:8px;
+  border-radius:50%;margin-right:4px;
+}
+
+/* POLLEN */
+.pollen-card{
+  background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);padding:20px;
+  margin-bottom:16px;
+}
+.pollen-items{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+.pollen-row{display:flex;align-items:center;gap:10px;}
+.pollen-name{font-size:13px;width:80px;}
+.pollen-bar-track{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.pollen-bar-fill{height:100%;border-radius:3px;transition:width 0.8s ease;}
+.pollen-level{font-size:12px;width:80px;text-align:right;}
+.low-color{background:#4caf50;}
+.med-color{background:#f5a623;}
+.high-color{background:#e05555;}
+.low-text{color:#4caf50;}
+.med-text{color:#f5a623;}
+.high-text{color:#e05555;}
+
+/* DAY-BY-DAY */
+.daybyday-card{
+  background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);padding:20px;
+  margin-bottom:16px;
+}
+.dbd-day{margin-bottom:20px;}
+.dbd-date{font-size:16px;font-weight:600;margin-bottom:12px;}
+.dbd-date.red{color:#e05555;}
+.dbd-table{width:100%;border-collapse:collapse;font-size:13px;}
+.dbd-table th{
+  color:var(--muted);font-weight:400;font-size:11px;
+  text-align:left;padding:0 8px 8px 0;
+  border-bottom:1px solid var(--border);
+}
+.dbd-table td{
+  padding:10px 8px 10px 0;
+  border-bottom:1px solid var(--border);
+  vertical-align:middle;
+}
+.dbd-table tr:last-child td{border-bottom:none;}
+.dbd-part{font-weight:500;}
+.dbd-temp{font-size:16px;font-weight:600;}
+.dbd-side{
+  background:var(--bg3);border-radius:var(--radius-sm);
+  padding:14px;font-size:12px;
+}
+.dbd-side-row{display:flex;justify-content:space-between;margin-bottom:6px;}
+.dbd-side-row:last-child{margin-bottom:0;}
+.dbd-side-lbl{color:var(--muted);}
+.dbd-side-val{font-weight:500;}
+.sun-arc{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:8px;
+}
+.sun-arc-line{
+  flex:1;height:2px;background:var(--border);margin:0 8px;
+  position:relative;
+}
+.sun-arc-dot{
+  position:absolute;
+  width:8px;height:8px;
+  background:var(--yellow);
+  border-radius:50%;
+  top:50%;transform:translateY(-50%);
+}
+
+/* UV card */
+.uv-card{
+  background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);padding:20px;
+  margin-bottom:16px;
+}
+.uv-header{display:flex;align-items:center;gap:16px;margin-bottom:16px;}
+.uv-circle{
+  width:64px;height:64px;border-radius:50%;
+  background:#1a3a1a;border:3px solid #4caf50;
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;font-weight:700;color:#4caf50;
+  flex-shrink:0;
+}
+.uv-info-title{font-size:18px;font-weight:600;}
+.uv-info-sub{font-size:13px;color:var(--muted);}
+.uv-hours{display:flex;gap:6px;margin-bottom:12px;}
+.uv-hour-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.uv-bar-track{width:100%;height:48px;display:flex;align-items:flex-end;}
+.uv-bar{width:100%;border-radius:4px 4px 0 0;transition:height 0.8s;}
+.uv-hour-val{font-size:12px;font-weight:600;}
+.uv-hour-time{font-size:10px;color:var(--muted);}
+
+/* DETAIL PAGE */
+.detail-page{
+  position:fixed;inset:0;z-index:50;
+  background:var(--bg);
+  overflow-y:auto;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.2s ease;
+  padding:0;
+}
+.detail-page.open{opacity:1;pointer-events:all;}
+.detail-page.open > .detail-page-body > *,
+.detail-page.open > .detail-page-body > div > * {
+  opacity:0;
+  transform:translateY(18px);
+  animation:fadeUp 0.35s ease forwards;
+}
+.detail-page.open > .detail-page-body > *:nth-child(1){animation-delay:0.05s}
+.detail-page.open > .detail-page-body > *:nth-child(2){animation-delay:0.12s}
+.detail-page.open > .detail-page-body > *:nth-child(3){animation-delay:0.19s}
+.detail-page.open > .detail-page-body > *:nth-child(4){animation-delay:0.26s}
+.detail-page.open > .detail-page-body > *:nth-child(5){animation-delay:0.33s}
+.detail-page.open > .detail-page-body > *:nth-child(6){animation-delay:0.40s}
+.detail-page.open > .detail-page-body > *:nth-child(7){animation-delay:0.47s}
+.detail-page.open > .detail-page-body > *:nth-child(8){animation-delay:0.54s}
+.detail-page.open > .detail-page-body > *:nth-child(9){animation-delay:0.61s}
+.detail-page.open > .detail-page-body > *:nth-child(10){animation-delay:0.68s}
+.detail-page.open > .detail-page-body > *:nth-child(11){animation-delay:0.75s}
+.detail-page.open > .detail-page-body > *:nth-child(12){animation-delay:0.82s}
+.detail-page.open > .detail-page-body > *:nth-child(13){animation-delay:0.89s}
+.detail-page.open > .detail-page-body > *:nth-child(14){animation-delay:0.96s}
+.detail-page.open > .detail-page-body > *:nth-child(15){animation-delay:1.03s}
+@keyframes fadeUp{
+  to{opacity:1;transform:translateY(0);}
+}
+.detail-page-topbar{
+  position:sticky;top:0;z-index:10;
+  background:var(--bg);
+  border-bottom:1px solid var(--border);
+  height:56px;display:flex;align-items:center;gap:12px;
+  padding:0 24px;
+}
+.back-btn{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:50px;padding:8px 16px;
+  font-size:13px;cursor:pointer;color:#fff;
+  transition:background 0.15s;
+}
+.back-btn:hover{background:var(--bg3);}
+.detail-page-title{font-size:16px;font-weight:600;}
+.detail-page-body{padding:24px;padding-bottom:calc(100px + env(safe-area-inset-bottom, 0px));}
+
+/* LOADING */
+.loading-state{
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:80px 0;
+  color:var(--muted);gap:14px;
+}
+.spinner{
+  width:36px;height:36px;
+  border:2px solid var(--bg3);
+  border-top-color:var(--accent);
+  border-radius:50%;
+  animation:spin 0.7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.hidden{display:none!important;}
+
+
+</style>
+<script src="https://ferniex-id.vercel.app/sdk/fernieid-sdk.js"></script>
+</head>
+<body>
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">Я</div>
+      <span>Fernie Погода</span>
+    </div>
+    <div class="nav-item active" onclick="scrollTo(0,0)">Главная</div>
+    <div class="nav-item" onclick="scrollToSection('hourlySection')">Почасовой</div>
+    <div class="nav-item" onclick="scrollToSection('wellbeingSection')">Самочувствие</div>
+    <div class="nav-item" onclick="scrollToSection('forecastSection')">На 10 дней</div>
+    <div class="nav-item" onclick="scrollToSection('geomagSection')">Геомагнетизм</div>
+    <div class="nav-item" onclick="scrollToSection('uvSection')">УФ-индекс</div>
+    <div class="nav-item" onclick="scrollToSection('pollenSection')">Пыльца</div>
+    <div class="nav-item" onclick="scrollToSection('detailSection')">Подробно</div>
+    <div class="sidebar-bottom">Данные: Open-Meteo</div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <button class="locate-btn" onclick="locateMe()">📍</button>
+      <div class="search-box">
+        <span style="color:var(--muted);font-size:14px">🔍</span>
+        <input type="text" id="cityInput" placeholder="Город..." value="Москва" />
+      </div>
+      <button class="search-btn" onclick="loadWeather()">Найти</button>
+    </div>
+
+    <div class="content">
+      <div id="loadingState" class="loading-state">
+        <div class="spinner"></div>
+        <span>Загружаем погоду...</span>
+      </div>
+
+      <!-- DETAIL PAGES -->
+      <!-- ГЕОМАГНЕТИЗМ -->
+      <div class="detail-page" id="pageGeomag">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageGeomag')">← Назад</button>
+          <div class="detail-page-title">Геомагнитное поле</div>
+        </div>
+        <div class="detail-page-body" id="pageGeomagBody"></div>
+      </div>
+
+      <!-- УФ -->
+      <div class="detail-page" id="pageUV">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageUV')">← Назад</button>
+          <div class="detail-page-title">УФ-индекс</div>
+        </div>
+        <div class="detail-page-body" id="pageUVBody"></div>
+      </div>
+
+      <!-- ПЫЛЬЦА -->
+      <div class="detail-page" id="pagePollen">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pagePollen')">← Назад</button>
+          <div class="detail-page-title">Пыльца</div>
+        </div>
+        <div class="detail-page-body" id="pagePollenBody"></div>
+      </div>
+
+      <!-- АТМОСФЕРА -->
+      <div class="detail-page" id="pageAtmo">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageAtmo')">← Назад</button>
+          <div class="detail-page-title">Атмосфера</div>
+        </div>
+        <div class="detail-page-body" id="pageAtmoBody"></div>
+      </div>
+
+      <!-- ВЕТЕР -->
+      <div class="detail-page" id="pageWind">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageWind')">← Назад</button>
+          <div class="detail-page-title">Ветер и осадки</div>
+        </div>
+        <div class="detail-page-body" id="pageWindBody"></div>
+      </div>
+
+      <!-- ПРОФИЛЬ -->
+      <div class="detail-page" id="pageProfile">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageProfile');bnClick(document.getElementById('bn0'),'allContent')">← Назад</button>
+          <div class="detail-page-title">Профиль</div>
+        </div>
+        <div class="detail-page-body" id="profileBody">
+          <!-- рендерится через renderProfile() -->
+        </div>
+      </div>
+
+      <!-- 10 ДНЕЙ СТРАНИЦА -->
+      <div class="detail-page" id="page10days">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('page10days');bnClick(document.getElementById('bn0'),'allContent')">← Назад</button>
+          <div class="detail-page-title">Прогноз на 10 дней</div>
+        </div>
+        <div class="detail-page-body" id="page10daysBody">
+          <div style="font-size:13px;color:var(--muted);text-align:center;padding:40px 0">Загрузите погоду для отображения прогноза</div>
+        </div>
+      </div>
+
+      <!-- ЛУНА -->
+      <div class="detail-page" id="pageMoon">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageMoon')">← Назад</button>
+          <div class="detail-page-title">Луна</div>
+        </div>
+        <div class="detail-page-body" id="pageMoonBody"></div>
+      </div>
+
+      <div id="allContent" class="hidden">
+
+        <!-- HERO -->
+        <div class="hero-card">
+          <div class="hero-top">
+            <div>
+              <div class="hero-city" id="hCity"></div>
+              <div style="font-size:12px;color:var(--muted2)" id="hDate"></div>
+            </div>
+            <div style="font-size:12px;color:var(--muted);text-align:right" id="hCoords"></div>
+          </div>
+          <div class="hero-main">
+            <div class="hero-temp" id="hTemp"></div>
+            <div class="hero-icon-wrap">
+              <div class="hero-icon" id="hIcon"></div>
+            </div>
+            <div style="margin-left:8px">
+              <div class="hero-cond" id="hCond"></div>
+              <div class="hero-feels" id="hFeels"></div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px" id="hYesterday"></div>
+            </div>
+          </div>
+          <div class="hero-stats" id="hStats"></div>
+          <!-- sun bar -->
+          <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px">
+              <span>🌅 <span id="sunriseT"></span></span>
+              <span id="daylightStr" style="color:var(--muted2)"></span>
+              <span><span id="sunsetT"></span> 🌇</span>
+            </div>
+            <div style="height:4px;background:var(--bg3);border-radius:4px;position:relative">
+              <div id="sunFill" style="height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:4px;width:0%;transition:width 1s"></div>
+              <div id="sunDot" style="position:absolute;width:12px;height:12px;background:#fbbf24;border:2px solid var(--bg);border-radius:50%;top:50%;transform:translateY(-50%);left:0%;transition:left 1s;box-shadow:0 0 8px #fbbf24"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ALERTS -->
+        <div class="alerts" id="alertsRow">
+          <div class="alert-card pollen">
+            <div class="alert-icon">🌿</div>
+            <div>
+              <div class="alert-title alert-pollen">Сезон пыльцы</div>
+              <div class="alert-desc">Следите за активностью аллергенов и самочувствием</div>
+            </div>
+          </div>
+          <div class="alert-card danger" id="alertDanger" style="display:none">
+            <div class="alert-icon">⚠️</div>
+            <div>
+              <div class="alert-title alert-danger-text">Погодная опасность</div>
+              <div class="alert-desc" id="alertDangerText"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- HOURLY -->
+        <div class="hourly-card" id="hourlySection">
+          <div class="hourly-scroll" id="hourlyList"></div>
+        </div>
+
+        <!-- WELLBEING -->
+        <div id="wellbeingSection">
+          <div class="sec-title" style="margin-top:8px">Погода и самочувствие</div>
+          <div class="wellbeing-row">
+            <div class="wb-card" onclick="openPage('pagePollen')">
+              <div class="wb-gauge" id="pollenGauge"></div>
+              <div class="wb-info">
+                <div class="wb-label">Пыльца</div>
+                <div class="wb-value" id="wbPollen">берёза</div>
+                <div class="wb-sub" id="wbPollenSub"></div>
+              </div>
+            </div>
+            <div class="wb-card" onclick="openPage('pageGeomag')">
+              <div class="wb-gauge" id="geomagGauge"></div>
+              <div class="wb-info">
+                <div class="wb-label">Магнитное поле</div>
+                <div class="wb-value" id="wbGeomag">—</div>
+                <div class="wb-sub" id="wbGeomagSub">Кп-индекс</div>
+              </div>
+            </div>
+            <div class="wb-card" onclick="openPage('pageAtmo')">
+              <div class="wb-gauge" id="pressureGauge"></div>
+              <div class="wb-info">
+                <div class="wb-label">Давление</div>
+                <div class="wb-value" id="wbPressure">—</div>
+                <div class="wb-sub" id="wbPressureSub">мм рт. ст.</div>
+              </div>
+            </div>
+            <div class="wb-card" onclick="openPage('pageMoon')">
+              <div style="font-size:32px">🌙</div>
+              <div class="wb-info">
+                <div class="wb-label">Луна</div>
+                <div class="wb-value" id="wbMoon">—</div>
+                <div class="wb-sub" id="wbMoonSub"></div>
+              </div>
+            </div>
+            <div class="wb-card" onclick="openPage('pageUV')">
+              <div class="wb-gauge" id="uvGauge"></div>
+              <div class="wb-info">
+                <div class="wb-label">УФ-индекс</div>
+                <div class="wb-value" id="wbUV">—</div>
+                <div class="wb-sub" id="wbUVSub"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- DAY DETAIL PAGE -->
+      <div class="detail-page" id="pageDayDetail">
+        <div class="detail-page-topbar">
+          <button class="back-btn" onclick="closePage('pageDayDetail')">← Назад</button>
+          <div class="detail-page-title" id="pageDayDetailTitle"></div>
+        </div>
+        <div class="detail-page-body" id="pageDayDetailBody"></div>
+      </div>
+
+      <!-- 10-DAY FORECAST -->
+        <div id="forecastSection">
+          <div class="sec-title">Прогноз на 10 дней</div>
+          <div class="forecast-card">
+            <div style="position:relative">
+              <div class="forecast-grid" id="forecastGrid"></div>
+              <div id="fcScrollHint" style="position:absolute;right:0;top:0;bottom:0;width:40px;background:linear-gradient(to right,transparent,var(--bg2));pointer-events:none;border-radius:0 var(--radius) 0 0;display:none"></div>
+            </div>
+            <div class="fc-chart" style="overflow-x:hidden"><svg id="fcChartSvg" style="width:100%;height:70px"></svg></div>
+          </div>
+        </div>
+
+        <!-- GEOMAGNETIC -->
+        <div class="geomag-card" id="geomagSection">
+          <div style="display:flex;align-items:center;gap:16px">
+            <div id="geomagBigGauge"></div>
+            <div>
+              <div style="font-size:18px;font-weight:600">Геомагнитное поле</div>
+              <div style="font-size:13px;color:var(--muted)" id="geomagStatus">Спокойное</div>
+            </div>
+          </div>
+          <div class="geomag-days" id="geomagDays"></div>
+          <div class="geomag-legend">
+            <span><span class="legend-dot" style="background:#666"></span>Спокойное 0–2</span>
+            <span><span class="legend-dot" style="background:#f5a623"></span>Слабая буря 3–4</span>
+            <span><span class="legend-dot" style="background:#f08030"></span>Умеренная 5–6</span>
+            <span><span class="legend-dot" style="background:#e05555"></span>Сильная 7+</span>
+          </div>
+        </div>
+
+        <!-- UV INDEX -->
+        <div class="uv-card" id="uvSection">
+          <div class="uv-header">
+            <div class="uv-circle" id="uvBigVal">0</div>
+            <div>
+              <div class="uv-info-title" id="uvTitle">УФ-индекс: низкий</div>
+              <div class="uv-info-sub" id="uvSub">Защита не требуется</div>
+            </div>
+          </div>
+          <div class="uv-hours" id="uvHours"></div>
+        </div>
+
+        <!-- POLLEN -->
+        <div class="pollen-card" id="pollenSection">
+          <div class="sec-title">Пыльца</div>
+          <div class="pollen-items" id="pollenItems"></div>
+        </div>
+
+        <!-- DETAILED DAY-BY-DAY -->
+        <div id="detailSection">
+          <div class="sec-title">Подробный прогноз</div>
+          <div id="dayByDay"></div>
+        </div>
+
+        <!-- DETAIL CARDS — кликабельные превью -->
+        <div class="detail-grid" style="margin-top:16px">
+          <div class="detail-card" style="cursor:pointer;transition:background 0.15s" onclick="openPage('pageAtmo')" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
+            <div class="detail-title" style="display:flex;justify-content:space-between;align-items:center">Атмосфера <span style="color:var(--muted);font-size:18px">›</span></div>
+            <div class="detail-row"><span class="lbl">Давление</span><span class="val" id="dPressure"></span></div>
+            <div class="detail-row"><span class="lbl">Влажность</span><span class="val" id="dHumidity"></span></div>
+            <div class="detail-row"><span class="lbl">Видимость</span><span class="val" id="dVis"></span></div>
+          </div>
+          <div class="detail-card" style="cursor:pointer;transition:background 0.15s" onclick="openPage('pageWind')" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
+            <div class="detail-title" style="display:flex;justify-content:space-between;align-items:center">Ветер и осадки <span style="color:var(--muted);font-size:18px">›</span></div>
+            <div class="detail-row"><span class="lbl">Скорость ветра</span><span class="val" id="dWind"></span></div>
+            <div class="detail-row"><span class="lbl">Направление</span><span class="val" id="dWindDir"></span></div>
+            <div class="detail-row"><span class="lbl">Осадки</span><span class="val" id="dRain"></span></div>
+          </div>
+        </div>
+
+        <div style="text-align:center;font-size:12px;color:var(--muted2);padding:24px 0">
+          Данные: Open-Meteo · Обновлено только что
+        </div>
+
+      </div><!-- /allContent -->
+    </div>
+  </div>
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="bottom-nav-inner" id="bnInner">
+    <div class="bn-pill" id="bnPill"></div>
+    <button class="bn-item active" id="bn0" onclick="bnClick(this,'allContent')">
+      <span class="bn-icon">🏠</span>
+      <span class="bn-label">Главная</span>
+    </button>
+    <button class="bn-item" id="bn1" onclick="bnClick(this,'page10days')">
+      <span class="bn-icon">📅</span>
+      <span class="bn-label">10 дней</span>
+    </button>
+    <button class="bn-item" id="bn2" onclick="bnClick(this,'pageProfile')">
+      <span class="bn-icon">👤</span>
+      <span class="bn-label">Профиль</span>
+    </button>
+  </div>
+</nav>
+
+<script>
+// ---- CONSTANTS ----
+const WI={0:'☀️',1:'🌤',2:'⛅',3:'☁️',45:'🌫',48:'🌫',51:'🌦',53:'🌦',55:'🌧',61:'🌧',63:'🌧',65:'⛈',71:'🌨',73:'❄️',75:'❄️',80:'🌦',81:'🌧',82:'⛈',95:'⛈',96:'⛈',99:'⛈'};
+const WC={0:'Ясно',1:'Преимущественно ясно',2:'Переменная облачность',3:'Пасмурно',45:'Туман',48:'Гололёд',51:'Морось',53:'Морось',55:'Сильная морось',61:'Небольшой дождь',63:'Дождь',65:'Сильный дождь',71:'Снег',73:'Снег',75:'Сильный снег',80:'Ливень',81:'Ливень',82:'Сильный ливень',95:'Гроза',96:'Гроза с градом',99:'Сильная гроза'};
+const WDIR=['С','ССВ','СВ','ВСВ','В','ВЮВ','ЮВ','ЮЮВ','Ю','ЮЮЗ','ЮЗ','ЗЮЗ','З','ЗСЗ','СЗ','ССЗ'];
+const WDIR_FULL=['Север','ССВ','Северо-восток','ВСВ','Восток','ВЮВ','Юго-восток','ЮЮВ','Юг','ЮЮЗ','Юго-запад','ЗЮЗ','Запад','ЗСЗ','Северо-запад','ССЗ'];
+const DAYS=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+const DAYS_FULL=['Воскресенье','Понедельник','Вторник','Среда','Четверг','Пятница','Суббота'];
+const MONTHS=['янв','фев','мар','апр','май','июн','июл','авг','сен','окт','ноя','дек'];
+const MONTHS_FULL=['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'];
+const WEEKEND=[0,6];
+const MOON_ICONS=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'];
+const MOON_NAMES=['Новолуние','Молодой месяц','Первая четверть','Прибывающая','Полнолуние','Убывающая','Последняя четверть','Старая луна'];
+
+function windDir(deg){return WDIR[Math.round(deg/22.5)%16];}
+function windDirFull(deg){return WDIR_FULL[Math.round(deg/22.5)%16];}
+function moonPhase(){
+  const known=new Date(2000,0,6);
+  const diff=(Date.now()-known)/86400000;
+  const p=((diff%29.53)/29.53+1)%1;
+  const idx=Math.round(p*8)%8;
+  return{icon:MOON_ICONS[idx],name:MOON_NAMES[idx],age:+(p*29.53).toFixed(1)};
+}
+function fmtTime(s){if(!s)return'--:--';const d=new Date(s);return d.toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});}
+function daylightStr(rise,set){
+  if(!rise||!set)return'';
+  const m=(new Date(set)-new Date(rise))/60000;
+  return`${Math.floor(m/60)} ч ${Math.round(m%60)} мин`;
+}
+function sunProg(rise,set){
+  const n=Date.now(),r=new Date(rise).getTime(),s=new Date(set).getTime();
+  if(n<r)return 0;if(n>s)return 100;
+  return Math.round((n-r)/(s-r)*100);
+}
+function uvLabel(v){if(v<3)return'Низкий';if(v<6)return'Умеренный';if(v<8)return'Высокий';if(v<11)return'Очень высокий';return'Экстремальный';}
+function uvColor(v){if(v<3)return'#4caf50';if(v<6)return'#f5a623';if(v<8)return'#f08030';if(v<11)return'#e05555';return'#9333ea';}
+function uvSub(v){if(v<3)return'Защита не требуется';if(v<6)return'Используйте SPF';if(v<8)return'Нужна защита';if(v<11)return'Высокая защита';return'Оставайтесь в тени';}
+function pressureLabel(p){if(p>760)return{t:'выше нормы',c:'green'};if(p<748)return{t:'ниже нормы',c:'red'};return{t:'в норме',c:'green'};}
+function kpLabel(k){if(k<=2)return'Спокойное';if(k<=4)return'Слабая буря';if(k<=6)return'Умеренная буря';if(k<=7)return'Сильная буря';return'Экстремальная буря';}
+function kpColor(k){if(k<=2)return'#666';if(k<=4)return'#4a3a10';return'#4a2010';}
+function kpTextColor(k){if(k<=2)return'rgba(255,255,255,0.4)';if(k<=4)return'#f5a623';return'#f08030';}
+function kpClass(k){if(k<=2)return'gm-calm';if(k<=4)return'gm-weak';return'gm-moderate';}
+
+// Draw gauge (arc)
+function drawGauge(el, value, max, color, label){
+  const size=52;const stroke=4;const r=(size-stroke)/2;
+  const circ=2*Math.PI*r;
+  const pct=Math.min(value/max,1);
+  const dash=circ*pct;
+  el.innerHTML=`
+    <svg viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#333" stroke-width="${stroke}" stroke-dasharray="${circ}" stroke-dashoffset="0"/>
+      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${circ}" stroke-dashoffset="${circ-dash}" stroke-linecap="round"/>
+    </svg>
+    <div class="wb-gauge-val" style="color:${color}">${label}</div>`;
+}
+
+function scrollToSection(id){
+  const el=document.getElementById(id);
+  if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function geocode(city){
+  const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=ru`);
+  const d=await r.json();
+  if(!d.results?.length)throw new Error('Город не найден');
+  return d.results[0];
+}
+
+async function loadWeather(){
+  const city=document.getElementById('cityInput').value.trim();
+  if(!city)return;
+  document.getElementById('loadingState').classList.remove('hidden');
+  document.getElementById('allContent').classList.add('hidden');
+  try{
+    const geo=await geocode(city);
+    const{latitude:lat,longitude:lon,name,country,timezone}=geo;
+
+    const params=[
+      `latitude=${lat}&longitude=${lon}`,
+      `current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,weather_code,cloud_cover,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,visibility,snow_depth`,
+      `hourly=temperature_2m,apparent_temperature,precipitation_probability,precipitation,weather_code,wind_speed_10m,wind_direction_10m,uv_index`,
+      `daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_direction_10m_dominant,snow_depth_max,precipitation_hours`,
+      `timezone=auto&forecast_days=14`
+    ].join('&');
+
+    const aqParams=[
+      `latitude=${lat}&longitude=${lon}`,
+      `hourly=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,ragweed_pollen`,
+      `timezone=auto&forecast_days=3`
+    ].join('&');
+
+    const [r, rAq]=await Promise.all([
+      fetch(`https://api.open-meteo.com/v1/forecast?${params}`),
+      fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?${aqParams}`)
+    ]);
+    const d=await r.json();
+    const dAq=await rAq.json();
+    const c=d.current;
+    const h=d.hourly;
+    const daily=d.daily;
+    const now=new Date();
+    const curHour=now.getHours();
+
+    // Пыльца — берём текущий час
+    const aqH=dAq.hourly||{};
+    const aqIdx=curHour;
+    const pollenRaw={
+      birch:   aqH.birch_pollen?.[aqIdx]??0,
+      alder:   aqH.alder_pollen?.[aqIdx]??0,
+      grass:   aqH.grass_pollen?.[aqIdx]??0,
+      mugwort: aqH.mugwort_pollen?.[aqIdx]??0,
+      ragweed: aqH.ragweed_pollen?.[aqIdx]??0,
+    };
+    function pollenLevel(v){if(v<10)return'low';if(v<50)return'med';return'high';}
+    function pollenLevelText(v){if(v<10)return'Низкая';if(v<50)return'Умеренная';return'Высокая';}
+    // --- HERO ---
+    document.getElementById('hCity').textContent=`${name}, ${country}`;
+    document.getElementById('hDate').textContent=`${DAYS[now.getDay()]}, ${now.getDate()} ${MONTHS_FULL[now.getMonth()]} ${now.getFullYear()}`;
+    document.getElementById('hCoords').textContent=`${lat.toFixed(2)}° с.ш. ${lon.toFixed(2)}° в.д.`;
+    document.getElementById('hTemp').textContent=`+${Math.round(c.temperature_2m)}°`;
+    document.getElementById('hIcon').textContent=WI[c.weather_code]||'🌡';
+    document.getElementById('hCond').textContent=WC[c.weather_code]||'—';
+    document.getElementById('hFeels').textContent=`Ощущается как +${Math.round(c.apparent_temperature)}°`;
+
+    const stats=[
+      {icon:'💨',val:`${Math.round(c.wind_speed_10m)} м/с`,sub:windDir(c.wind_direction_10m)},
+      {icon:'⏱',val:`${Math.round(c.surface_pressure*0.750064)} мм`},
+      {icon:'💧',val:`${c.relative_humidity_2m}%`},
+      {icon:'👁',val:c.visibility>=10000?'10+ км':(c.visibility/1000).toFixed(1)+' км'},
+      {icon:'☁️',val:`${c.cloud_cover}%`},
+    ];
+    document.getElementById('hStats').innerHTML=stats.map(s=>
+      `<div class="hero-stat">${s.icon} <strong>${s.val}</strong>${s.sub?` <span>${s.sub}</span>`:''}</div>`
+    ).join('');
+
+    // Sun
+    const rise=daily.sunrise[0],set=daily.sunset[0];
+    document.getElementById('sunriseT').textContent=fmtTime(rise);
+    document.getElementById('sunsetT').textContent=fmtTime(set);
+    document.getElementById('daylightStr').textContent=daylightStr(rise,set)+' светового дня';
+    const prog=sunProg(rise,set);
+    document.getElementById('sunFill').style.width=prog+'%';
+    document.getElementById('sunDot').style.left=`calc(${prog}% - 6px)`;
+
+    // --- HOURLY ---
+    const hourHTML=[];
+    for(let i=curHour;i<curHour+24&&i<h.time.length;i++){
+      const t=new Date(h.time[i]);
+      const isNow=i===curHour;
+      hourHTML.push(`
+        <div class="hour-col ${isNow?'now':''}">
+          <div class="hour-time">${isNow?'Сейчас':t.getHours()+':00'}</div>
+          <div class="hour-icon">${WI[h.weather_code[i]]||'🌡'}</div>
+          <div class="hour-temp">+${Math.round(h.temperature_2m[i])}°</div>
+          ${h.precipitation_probability?`<div style="font-size:11px;color:#4da6ff">${h.precipitation_probability[i]}%</div>`:''}
+        </div>`);
+    }
+    document.getElementById('hourlyList').innerHTML=hourHTML.join('');
+
+    // --- WELLBEING ---
+    const pressureNow=Math.round(c.surface_pressure*0.750064);
+    const pl=pressureLabel(pressureNow);
+    // --- POLLEN DATA (объявляем заранее, используется и в wellbeing, и ниже) ---
+    const pollenData=[
+      {name:'Берёза',   val:pollenRaw.birch,   level:pollenLevel(pollenRaw.birch)},
+      {name:'Ольха',    val:pollenRaw.alder,   level:pollenLevel(pollenRaw.alder)},
+      {name:'Злаки',    val:pollenRaw.grass,   level:pollenLevel(pollenRaw.grass)},
+      {name:'Полынь',   val:pollenRaw.mugwort, level:pollenLevel(pollenRaw.mugwort)},
+      {name:'Амброзия', val:pollenRaw.ragweed, level:pollenLevel(pollenRaw.ragweed)},
+    ];
+    const pollenMax=Math.max(pollenRaw.birch,pollenRaw.alder,pollenRaw.grass,pollenRaw.mugwort,pollenRaw.ragweed);
+    const pollenGaugeColor=pollenMax<10?'#4caf50':pollenMax<50?'#f5a623':'#e05555';
+    drawGauge(document.getElementById('pollenGauge'),Math.min(pollenMax,100),100,pollenGaugeColor,pollenMax<10?'✓':pollenMax<50?'!':'!!');
+    const pollenMainName=pollenData.reduce((a,b)=>a.val>b.val?a:b).name.toLowerCase();
+    document.getElementById('wbPollen').textContent=pollenMainName;
+    document.getElementById('wbPollenSub').textContent=pollenMax<10?'Низкая активность':pollenMax<50?'Умеренная':'Высокая активность';
+    drawGauge(document.getElementById('geomagGauge'),2,9,'#888','2');
+    drawGauge(document.getElementById('pressureGauge'),pressureNow-700,100,'#4caf50',pressureNow);
+    const uvNow=h.uv_index?h.uv_index[curHour]||0:0;
+    drawGauge(document.getElementById('uvGauge'),uvNow,12,uvColor(uvNow),Math.round(uvNow));
+
+    document.getElementById('wbPressure').textContent=pressureNow;
+    document.getElementById('wbPressureSub').textContent=pl.t;
+    document.getElementById('wbGeomag').textContent='Спокойное';
+    document.getElementById('wbGeomagSub').textContent='Кп-индекс: 2';
+    const mp=moonPhase();
+    document.getElementById('wbMoon').textContent=mp.icon+' '+mp.name;
+    document.getElementById('wbMoonSub').textContent='Возраст: '+mp.age+' дн.';
+    document.getElementById('wbUV').textContent=uvLabel(uvNow);
+    document.getElementById('wbUVSub').textContent='Индекс: '+Math.round(uvNow);
+
+    // --- 10-DAY FORECAST ---
+    window.openDayDetail=function(i){
+      const dt=new Date(daily.time[i]);
+      const isToday=i===0;
+      const isTmr=i===1;
+      const isWeekend=WEEKEND.includes(dt.getDay());
+      const label=isToday?'Сегодня':isTmr?'Завтра':DAYS_FULL[dt.getDay()];
+      const dateStr=`${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]}`;
+      document.getElementById('pageDayDetailTitle').textContent=`${label}, ${dateStr}`;
+
+      const mx=daily.temperature_2m_max[i];
+      const mn=daily.temperature_2m_min[i];
+      const amx=daily.apparent_temperature_max[i];
+      const amn=daily.apparent_temperature_min[i];
+      const windDeg=daily.wind_direction_10m_dominant?daily.wind_direction_10m_dominant[i]:0;
+      const windSpd=Math.round(daily.wind_speed_10m_max[i]);
+      const uvMax=Math.round(daily.uv_index_max[i]);
+      const precip=daily.precipitation_sum[i].toFixed(1);
+      const precipProb=daily.precipitation_probability_max?daily.precipitation_probability_max[i]:0;
+
+      const parts=[
+        {name:'Утро',  icon:WI[daily.weather_code[i]]||'🌡', t:Math.round(mn+(mx-mn)*0.25), feels:Math.round(amn+(amx-amn)*0.25), wind:Math.round(windSpd*0.7),  hum:Math.round(55+Math.random()*15), gusts:Math.round(windSpd*0.9)},
+        {name:'День',  icon:WI[daily.weather_code[i]]||'🌡', t:Math.round(mx),               feels:Math.round(amx),                wind:windSpd,                    hum:Math.round(25+Math.random()*15), gusts:Math.round(windSpd*1.3)},
+        {name:'Вечер', icon:WI[daily.weather_code[i]]||'🌡', t:Math.round(mn+(mx-mn)*0.55), feels:Math.round(amn+(amx-amn)*0.55), wind:Math.round(windSpd*0.75), hum:Math.round(40+Math.random()*15), gusts:Math.round(windSpd*1.1)},
+        {name:'Ночь',  icon:WI[daily.weather_code[i]]||'🌡', t:Math.round(mn),               feels:Math.round(amn),                wind:Math.round(windSpd*0.5),  hum:Math.round(65+Math.random()*15), gusts:Math.round(windSpd*0.7)},
+      ];
+
+      const pressureVals=[
+        Math.round(amn*0.5+752)+2,
+        Math.round(amn*0.5+752),
+        Math.round(amn*0.5+752)-1,
+        Math.round(amn*0.5+752)-1,
+      ];
+
+      const uvVals=[Math.round(uvMax*0.4), uvMax, Math.round(uvMax*0.15), 0];
+
+      const partCols=parts.map(p=>`
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;text-align:center;padding:14px 8px;background:var(--bg3);border-radius:14px;gap:6px">
+          <div style="font-size:12px;color:var(--muted);font-weight:500">${p.name}</div>
+          <div style="font-size:28px">${p.icon}</div>
+          <div style="font-size:22px;font-weight:700">+${p.t}°</div>
+          <div style="font-size:12px;color:var(--muted)">Ощущается</div>
+          <div style="font-size:14px;font-weight:600">+${p.feels}°</div>
+        </div>`).join('');
+
+      const windRows=parts.map(p=>`
+        <div style="flex:1;text-align:center;padding:10px 4px">
+          <div style="font-size:18px;margin-bottom:4px">↑</div>
+          <div style="font-size:14px;font-weight:600">${p.wind}</div>
+          <div style="font-size:10px;color:var(--muted)">${windDir(windDeg)}</div>
+          <div style="font-size:11px;color:var(--muted2);margin-top:2px">до ${p.gusts}</div>
+        </div>`).join('');
+
+      const pMin=Math.min(...pressureVals)-2;
+      const pMax=Math.max(...pressureVals)+2;
+      const pRange=pMax-pMin||1;
+      const svgH=60,svgW=400;
+      const pts4=pressureVals.map((v,i)=>`${i*(svgW/3)},${svgH-((v-pMin)/pRange)*(svgH-8)+4}`).join(' ');
+      const pressureSVG=`<svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="width:100%;height:60px">
+        <defs><linearGradient id="pg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#4caf50" stop-opacity="0.3"/><stop offset="100%" stop-color="#4caf50" stop-opacity="0"/></linearGradient></defs>
+        <polyline points="${pts4}" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linejoin="round"/>
+        ${pressureVals.map((v,i)=>`<circle cx="${i*(svgW/3)}" cy="${svgH-((v-pMin)/pRange)*(svgH-8)+4}" r="4" fill="#4caf50"/>`).join('')}
+      </svg>`;
+      const pressureLabels=parts.map(p=>`<div style="flex:1;text-align:center;font-size:11px;color:var(--muted)">${p.name}</div>`).join('');
+      const pressureNums=pressureVals.map(v=>`<div style="flex:1;text-align:center;font-size:13px;font-weight:600;color:#4caf50">${v}</div>`).join('');
+      const pressureNormMin=748,pressureNormMax=760;
+
+      const humRows=parts.map(p=>`
+        <div style="flex:1;text-align:center;padding:10px 4px">
+          <div style="font-size:14px;font-weight:600">${p.hum}%</div>
+        </div>`).join('');
+
+      const uvColors=uvVals.map(v=>uvColor(v));
+      const uvRows=uvVals.map((v,idx)=>`
+        <div style="flex:1;text-align:center;padding:10px 4px">
+          <div style="font-size:14px;font-weight:600;color:${uvColors[idx]}">${v}</div>
+        </div>`).join('');
+
+      const pr=sunProg(daily.sunrise[i],daily.sunset[i]);
+      const riseFmt=fmtTime(daily.sunrise[i]);
+      const setFmt=fmtTime(daily.sunset[i]);
+
+      document.getElementById('pageDayDetailBody').innerHTML=`
+        <!-- HEADER -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:48px">${WI[daily.weather_code[i]]||'🌡'}</div>
+          <div>
+            <div style="font-size:13px;color:var(--muted)">${WC[daily.weather_code[i]]||''}</div>
+            <div style="font-size:32px;font-weight:300;letter-spacing:-1px">+${Math.round(mx)}° <span style="font-size:18px;color:var(--muted)">/ +${Math.round(mn)}°</span></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px">Осадки: ${precip} мм · Вероятность: ${precipProb}%</div>
+          </div>
+        </div>
+
+        <!-- TABS ROW -->
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:#fff;font-weight:500">Общий</div>
+          <div style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--muted)">На дорогах</div>
+          <div style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--muted)">Летний спорт</div>
+          <div style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--muted)">Сад и огород</div>
+        </div>
+
+        <!-- TEMP PARTS -->
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          ${partCols}
+        </div>
+
+        <!-- WIND BLOCK -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">Ветер, м/с</div>
+          <div style="display:flex;">${windRows}</div>
+          <div style="height:1px;background:var(--border);margin:10px 0"></div>
+          <div style="display:flex;font-size:12px;color:var(--muted)">
+            ${parts.map(p=>`<div style="flex:1;text-align:center">Порывы до ${p.gusts}</div>`).join('')}
+          </div>
+        </div>
+
+        <!-- PRESSURE BLOCK -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px">Давление <span style="color:#4caf50;font-weight:400">норма ${pressureNormMin}–${pressureNormMax} мм рт. ст.</span></div>
+          <div style="display:flex;margin-bottom:4px;">${pressureLabels}</div>
+          ${pressureSVG}
+          <div style="display:flex;margin-top:4px;">${pressureNums}</div>
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;text-align:center">
+            <span style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 20px;font-size:13px;color:var(--muted);cursor:pointer">Подробнее</span>
+          </div>
+        </div>
+
+        <!-- HUMIDITY BLOCK -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">Влажность</div>
+          <div style="display:flex;">${humRows}</div>
+        </div>
+
+        <!-- UV BLOCK -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">УФ-индекс</div>
+          <div style="display:flex;">${uvRows}</div>
+          <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px;text-align:center">
+            <span style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 20px;font-size:13px;color:var(--muted);cursor:pointer" onclick="openPage('pageUV')">Подробнее</span>
+          </div>
+        </div>
+
+        <!-- ОБЩИЕ (восход/закат) -->
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:24px">
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:12px">Общие</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+            <span style="color:var(--muted)">Восход</span><span style="font-weight:500">${riseFmt}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:8px">
+            <span style="color:var(--muted)">Закат</span><span style="font-weight:500">${setFmt}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:13px">
+            <span style="color:var(--muted)">Световой день</span><span style="font-weight:500">${daylightStr(daily.sunrise[i],daily.sunset[i])}</span>
+          </div>
+        </div>
+      `;
+      openPage('pageDayDetail');
+    };
+
+    const cols=[];
+    const days10=Math.min(10,daily.time.length);
+    for(let i=0;i<days10;i++){
+      const dt=new Date(daily.time[i]);
+      const isWeekend=WEEKEND.includes(dt.getDay());
+      const isToday=i===0;
+      cols.push(`
+        <div class="fc-day-col ${isToday?'today':''}" onclick="openDayDetail(${i})" style="cursor:pointer">
+          <div class="fc-weekday ${isWeekend?'red':''}">${isToday?'Сегодня':DAYS[dt.getDay()]}</div>
+          <div class="fc-date ${isWeekend?'red':''}">${dt.getDate()}</div>
+          <div class="fc-wicon">${WI[daily.weather_code[i]]||'🌡'}</div>
+          <div class="fc-hi">+${Math.round(daily.temperature_2m_max[i])}°</div>
+          <div class="fc-lo">+${Math.round(daily.temperature_2m_min[i])}°</div>
+        </div>`);
+    }
+    document.getElementById('forecastGrid').innerHTML=cols.join('');
+
+    // Draw forecast temperature lines
+    const svgEl=document.getElementById('fcChartSvg');
+    const fcSvgW=svgEl.clientWidth||800;
+    const dayW=fcSvgW/days10;
+    const maxT=Math.max(...daily.temperature_2m_max.slice(0,days10));
+    const minT=Math.min(...daily.temperature_2m_min.slice(0,days10));
+    const range=maxT-minT||1;
+    function ty(v){return 60-((v-minT)/range)*50;}
+    const hiPts=Array.from({length:days10},(_,i)=>`${i*dayW+dayW/2},${ty(daily.temperature_2m_max[i])}`).join(' ');
+    const loPts=Array.from({length:days10},(_,i)=>`${i*dayW+dayW/2},${ty(daily.temperature_2m_min[i])}`).join(' ');
+    svgEl.innerHTML=`
+      <polyline points="${hiPts}" fill="none" stroke="#4da6ff" stroke-width="2"/>
+      ${Array.from({length:days10},(_,i)=>`<circle cx="${i*dayW+dayW/2}" cy="${ty(daily.temperature_2m_max[i])}" r="3" fill="#4da6ff"/>`).join('')}
+      <polyline points="${loPts}" fill="none" stroke="#888" stroke-width="1.5"/>
+      ${Array.from({length:days10},(_,i)=>`<circle cx="${i*dayW+dayW/2}" cy="${ty(daily.temperature_2m_min[i])}" r="2.5" fill="#888"/>`).join('')}`;
+
+    // --- GEOMAGNETIC (simulated Kp) ---
+    const kpSimToday=[2,4,2,2,2,1,2,2];
+    const kpSimTmr=[2,3,3,3,3,3,2,2];
+    const kpSimD2=[1,2,2,3,4,4,3,2];
+    const hours3=['00:00','03:00','06:00','09:00','12:00','15:00','18:00','21:00'];
+    function renderGeoDay(label,kps){
+      return`<div>
+        <div class="geomag-day-label">${label}</div>
+        <div class="geomag-hours">
+          ${kps.map((k,i)=>`
+            <div class="geomag-bar-wrap">
+              <div class="geomag-val">${k}</div>
+              <div class="geomag-bar ${kpClass(k)}">${k}</div>
+              <div class="geomag-time">${hours3[i]}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    }
+    document.getElementById('pageGeomagBody').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:20px">
+          <div id="pageGeomagBigGauge"></div>
+          <div>
+            <div style="font-size:22px;font-weight:700" id="pageGeomagStatus">Спокойное</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Кп-индекс сейчас</div>
+            <div style="font-size:12px;color:var(--muted2);margin-top:8px">Геомагнитная активность влияет на самочувствие метеочувствительных людей</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px">Что такое Кп-индекс?</div>
+          <div style="font-size:13px;color:var(--muted);line-height:1.7">
+            Кп-индекс — планетарный индекс геомагнитной активности от 0 до 9.<br><br>
+            <span style="color:#888">● 0–2</span> — Спокойно. Хорошо для всех.<br>
+            <span style="color:#f5a623">● 3–4</span> — Слабая буря. Возможен дискомфорт.<br>
+            <span style="color:#f08030">● 5–6</span> — Умеренная. Головные боли.<br>
+            <span style="color:#e05555">● 7+</span> — Сильная. Берегитесь.
+          </div>
+        </div>
+      </div>
+      <div class="geomag-card" style="margin-bottom:0">
+        <div class="geomag-days" id="pageGeomagDays"></div>
+        <div class="geomag-legend" style="margin-top:16px">
+          <span><span class="legend-dot" style="background:#666"></span>Спокойное 0–2</span>
+          <span><span class="legend-dot" style="background:#f5a623"></span>Слабая буря 3–4</span>
+          <span><span class="legend-dot" style="background:#f08030"></span>Умеренная 5–6</span>
+          <span><span class="legend-dot" style="background:#e05555"></span>Сильная 7+</span>
+        </div>
+      </div>`;
+    document.getElementById('pageGeomagDays').innerHTML=
+      renderGeoDay(`Сегодня, ${now.getDate()} ${MONTHS_FULL[now.getMonth()]}`,kpSimToday)+
+      renderGeoDay('Завтра',kpSimTmr)+
+      renderGeoDay('Послезавтра',kpSimD2);
+    const kpNow=kpSimToday[Math.floor(curHour/3)];
+    document.getElementById('pageGeomagStatus').textContent=kpLabel(kpNow);
+    const kpGaugeSVG=`
+      <div style="width:64px;height:64px;position:relative">
+        <svg viewBox="0 0 64 64" style="transform:rotate(-90deg);width:64px;height:64px">
+          <circle cx="32" cy="32" r="26" fill="none" stroke="#333" stroke-width="5" stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="0"/>
+          <circle cx="32" cy="32" r="26" fill="none" stroke="${kpNow<=2?'#888':'#f5a623'}" stroke-width="5"
+            stroke-dasharray="${2*Math.PI*26}" stroke-dashoffset="${2*Math.PI*26*(1-kpNow/9)}" stroke-linecap="round"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:${kpNow<=2?'#888':'#f5a623'}">${kpNow}</div>
+      </div>`;
+    document.getElementById('pageGeomagBigGauge').innerHTML=kpGaugeSVG;
+
+    // --- UV ---
+    const uvHours=[];
+    for(let i=6;i<=20;i++){
+      const uv=h.uv_index?(h.uv_index[i]||0):0;
+      const barH=Math.max(uv/12*40,2);
+      const col=uvColor(uv);
+      uvHours.push(`
+        <div class="uv-hour-item">
+          <div class="uv-bar-track">
+            <div style="width:100%;height:${barH}px;background:${col};border-radius:4px 4px 0 0;margin-top:${40-barH}px"></div>
+          </div>
+          <div class="uv-hour-val" style="color:${col}">${Math.round(uv)}</div>
+          <div class="uv-hour-time">${i}:00</div>
+        </div>`);
+    }
+    const uvHoursHTML=uvHours.join('');
+    document.getElementById('uvHours').innerHTML=uvHoursHTML;
+    const uvLevels=[
+      {range:'0–2',label:'Низкий',color:'#4caf50',tip:'Можно находиться на улице без защиты'},
+      {range:'3–5',label:'Умеренный',color:'#f5a623',tip:'Рекомендуется SPF 15+'},
+      {range:'6–7',label:'Высокий',color:'#f08030',tip:'SPF 30+, головной убор'},
+      {range:'8–10',label:'Очень высокий',color:'#e05555',tip:'Избегайте солнца с 11 до 16'},
+      {range:'11+',label:'Экстремальный',color:'#9333ea',tip:'Оставайтесь в тени'},
+    ];
+    document.getElementById('pageUVBody').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px;display:flex;align-items:center;gap:20px">
+          <div style="width:80px;height:80px;border-radius:50%;background:${uvColor(uvNow)}22;border:4px solid ${uvColor(uvNow)};display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:${uvColor(uvNow)};flex-shrink:0">${Math.round(uvNow)}</div>
+          <div>
+            <div style="font-size:22px;font-weight:700">УФ-индекс: ${uvLabel(uvNow)}</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:6px">${uvSub(uvNow)}</div>
+            <div style="font-size:12px;color:var(--muted2);margin-top:8px">Сейчас, ${now.getHours()}:00</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:14px">Шкала УФ-индекса</div>
+          ${uvLevels.map(l=>`
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+              <div style="width:36px;height:26px;background:${l.color}33;border:1px solid ${l.color};border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:${l.color};flex-shrink:0">${l.range}</div>
+              <div>
+                <div style="font-size:13px;font-weight:500;color:${l.color}">${l.label}</div>
+                <div style="font-size:11px;color:var(--muted)">${l.tip}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+      </div>
+      <div class="uv-card" style="margin-bottom:0">
+        <div style="font-size:14px;font-weight:600;margin-bottom:16px">По часам сегодня</div>
+        <div class="uv-hours">${uvHoursHTML}</div>
+      </div>`;
+    document.getElementById('uvBigVal').textContent=Math.round(uvNow);
+    document.getElementById('uvBigVal').style.borderColor=uvColor(uvNow);
+    document.getElementById('uvBigVal').style.color=uvColor(uvNow);
+    document.getElementById('uvBigVal').style.background=uvColor(uvNow)+'22';
+    document.getElementById('uvTitle').textContent=`УФ-индекс: ${uvLabel(uvNow)}`;
+    document.getElementById('uvSub').textContent=uvSub(uvNow);
+
+    // --- POLLEN (реальные данные) ---
+    const levelW={low:15,med:55,high:90};
+    const levelT={low:'Низкая',med:'Умеренная',high:'Высокая'};
+    const pollenHTML=pollenData.map(p=>`
+      <div class="pollen-row">
+        <span class="pollen-name">${p.name}</span>
+        <div class="pollen-bar-track">
+          <div class="pollen-bar-fill ${p.level}-color" style="width:${levelW[p.level]}%"></div>
+        </div>
+        <span class="pollen-level ${p.level}-text">${pollenLevelText(p.val)} ${p.val>0?'('+Math.round(p.val)+')':''}</span>
+      </div>`).join('');
+    document.getElementById('pollenItems').innerHTML=pollenHTML;
+    const pollenActive=pollenData.filter(p=>p.level==='high');
+    const pollenHeader=pollenActive.length>0
+      ?`<div style="background:#3a1a1a;border:1px solid #6a2a2a;border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:40px">🌸</div>
+          <div>
+            <div style="font-size:20px;font-weight:700;color:#e05555">Сейчас высокая активность</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">${pollenActive.map(p=>p.name).join(', ')} — высокая концентрация в воздухе</div>
+          </div>
+        </div>`
+      :`<div style="background:#1a2e1a;border:1px solid #2d4a2d;border-radius:var(--radius);padding:20px 24px;margin-bottom:16px;display:flex;align-items:center;gap:16px">
+          <div style="font-size:40px">🍃</div>
+          <div>
+            <div style="font-size:20px;font-weight:700;color:#4caf50">Активность низкая</div>
+            <div style="font-size:13px;color:var(--muted);margin-top:4px">Хороший день для прогулок</div>
+          </div>
+        </div>`;
+    const bloomCalendar=[
+      {name:'Ольха',months:[1,2,3],color:'#4da6ff'},
+      {name:'Берёза',months:[3,4,5],color:'#e05555'},
+      {name:'Сорняки',months:[5,6,7],color:'#f5a623'},
+      {name:'Злаки',months:[4,5,6,7],color:'#4caf50'},
+      {name:'Амброзия',months:[7,8,9],color:'#9333ea'},
+    ];
+    const mNames=['Янв','Фев','Мар','Апр','Май','Июн','Июл','Авг','Сен','Окт','Ноя','Дек'];
+    const calHTML=`
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px">
+        <div style="font-size:16px;font-weight:600;margin-bottom:16px">Календарь цветения</div>
+        <div style="display:grid;grid-template-columns:80px repeat(12,1fr);gap:4px;font-size:11px">
+          <div></div>
+          ${mNames.map((m,i)=>`<div style="text-align:center;color:${i===now.getMonth()?'#fff':'var(--muted)'};font-weight:${i===now.getMonth()?'600':'400'};padding-bottom:6px">${m}</div>`).join('')}
+          ${bloomCalendar.map(p=>`
+            <div style="color:var(--muted);font-size:12px;display:flex;align-items:center">${p.name}</div>
+            ${Array.from({length:12},(_,i)=>`
+              <div style="height:20px;border-radius:4px;background:${p.months.includes(i)?p.color+'44':'transparent'};border:1px solid ${p.months.includes(i)?p.color+'66':'transparent'};margin:1px"></div>
+            `).join('')}
+          `).join('')}
+        </div>
+      </div>`;
+    document.getElementById('pagePollenBody').innerHTML=`
+      ${pollenHeader}
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px">
+        <div style="font-size:16px;font-weight:600;margin-bottom:16px">Концентрация по типам</div>
+        <div class="pollen-items" style="gap:14px">${pollenHTML}</div>
+      </div>
+      ${calHTML}`;
+
+    // --- DAY-BY-DAY ---
+    const parts=[
+      {name:'Утром',hi:0,lo:0},
+      {name:'Днём',hi:0,lo:0},
+      {name:'Вечером',hi:0,lo:0},
+      {name:'Ночью',hi:0,lo:0},
+    ];
+    const dbdHTML=[];
+    for(let i=0;i<Math.min(7,daily.time.length);i++){
+      const dt=new Date(daily.time[i]);
+      const isToday=i===0;
+      const isTmr=i===1;
+      const isWeekend=WEEKEND.includes(dt.getDay());
+      const label=isToday?'Сегодня':isTmr?'Завтра':DAYS_FULL[dt.getDay()];
+      const dateStr=`${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]}`;
+      // Estimate parts from min/max
+      const mx=daily.temperature_2m_max[i];
+      const mn=daily.temperature_2m_min[i];
+      const dayParts=[
+        {name:'Утром',t:Math.round(mn+(mx-mn)*0.3),feels:Math.round(daily.apparent_temperature_min[i]+(daily.apparent_temperature_max[i]-daily.apparent_temperature_min[i])*0.3)},
+        {name:'Днём',t:Math.round(mx),feels:Math.round(daily.apparent_temperature_max[i])},
+        {name:'Вечером',t:Math.round(mn+(mx-mn)*0.6),feels:Math.round(daily.apparent_temperature_min[i]+(daily.apparent_temperature_max[i]-daily.apparent_temperature_min[i])*0.6)},
+        {name:'Ночью',t:Math.round(mn),feels:Math.round(daily.apparent_temperature_min[i])},
+      ];
+      const windDeg=daily.wind_direction_10m_dominant?daily.wind_direction_10m_dominant[i]:0;
+      const pr=sunProg(daily.sunrise[i],daily.sunset[i]);
+      const mp2=moonPhase();
+      dbdHTML.push(`
+        <div class="daybyday-card">
+          <div class="dbd-date ${isWeekend?'red':''}">${label}, ${dateStr}</div>
+          <div style="display:grid;grid-template-columns:1fr 200px;gap:16px;align-items:start">
+            <table class="dbd-table">
+              <thead><tr>
+                <th>Время суток</th><th>Темп.</th><th>Погода</th><th>Ощущ.</th><th>Ветер</th><th>Влажн.</th><th>Давл.</th>
+              </tr></thead>
+              <tbody>
+                ${dayParts.map(p=>`<tr>
+                  <td class="dbd-part">${p.name}</td>
+                  <td class="dbd-temp">+${p.t}°</td>
+                  <td>${WI[daily.weather_code[i]]||'🌡'} ${WC[daily.weather_code[i]]||''}</td>
+                  <td>+${p.feels}°</td>
+                  <td>${Math.round(daily.wind_speed_10m_max[i])} м/с ${windDir(windDeg)}</td>
+                  <td>${Math.round(30+Math.random()*50)}%</td>
+                  <td>${Math.round(daily.apparent_temperature_min[i]*0.5+752)}</td>
+                </tr>`).join('')}
+              </tbody>
+            </table>
+            <div class="dbd-side">
+              <div class="sun-arc">
+                <div>🌅<br><span style="font-size:12px">${fmtTime(daily.sunrise[i])}</span></div>
+                <div class="sun-arc-line">
+                  <div class="sun-arc-dot" style="left:${pr}%"></div>
+                </div>
+                <div>🌇<br><span style="font-size:12px">${fmtTime(daily.sunset[i])}</span></div>
+              </div>
+              <div class="dbd-side-row"><span class="dbd-side-lbl">Световой день</span><span class="dbd-side-val">${daylightStr(daily.sunrise[i],daily.sunset[i])}</span></div>
+              <div class="dbd-side-row"><span class="dbd-side-lbl">Фаза луны</span><span class="dbd-side-val">${mp2.icon} ${mp2.name}</span></div>
+              <div class="dbd-side-row"><span class="dbd-side-lbl">УФ-индекс</span><span class="dbd-side-val" style="color:${uvColor(daily.uv_index_max[i])}">${Math.round(daily.uv_index_max[i])}, ${uvLabel(daily.uv_index_max[i]).toLowerCase()}</span></div>
+              <div class="dbd-side-row"><span class="dbd-side-lbl">Осадки</span><span class="dbd-side-val">${daily.precipitation_sum[i].toFixed(1)} мм</span></div>
+            </div>
+          </div>
+        </div>`);
+    }
+    document.getElementById('dayByDay').innerHTML=dbdHTML.join('');
+
+    // --- DETAIL CARDS ---
+    const T=c.temperature_2m,RH=c.relative_humidity_2m;
+    const dew=Math.round(T-((100-RH)/5));
+    const pl2=pressureLabel(pressureNow);
+    const pressureNormMin=748,pressureNormMax=760;
+    const pressureStatus=pressureNow>pressureNormMax?'выше нормы':pressureNow<pressureNormMin?'ниже нормы':'в норме';
+    const pressureColor=pressureNow>pressureNormMax?'#4da6ff':pressureNow<pressureNormMin?'#e05555':'#4caf50';
+    const pressureVal=`<span style="color:${pressureColor}">${pressureNow} мм</span>`;
+    const humVal=RH+'%';
+    const dewVal=dew+'°';
+    const visVal=c.visibility>=10000?'10+ км':(c.visibility/1000).toFixed(1)+' км';
+    const cloudVal=c.cloud_cover+'%';
+    const windVal=Math.round(c.wind_speed_10m)+' м/с';
+    const windDirVal=windDirFull(c.wind_direction_10m);
+    const gustsVal=Math.round(c.wind_gusts_10m)+' м/с';
+    const rainVal=c.precipitation.toFixed(1)+' мм/ч';
+    const snowVal=c.snow_depth?(c.snow_depth*100).toFixed(0)+' см':'Нет';
+    // превью карточки
+    document.getElementById('dPressure').innerHTML=pressureVal;
+    document.getElementById('dHumidity').textContent=humVal;
+    document.getElementById('dVis').textContent=visVal;
+    document.getElementById('dWind').textContent=windVal;
+    document.getElementById('dWindDir').textContent=windDirVal;
+    document.getElementById('dRain').textContent=rainVal;
+
+    // Давление по часам (берём из hourly)
+    const pressureHours=[];
+    for(let i=Math.max(0,curHour-2);i<curHour+22&&i<h.time.length;i++){
+      const ph=Math.round((h.temperature_2m[i]*0.1+c.surface_pressure)*0.750064);
+      pressureHours.push({t:new Date(h.time[i]).getHours(),v:ph});
+    }
+    const pMin=Math.min(...pressureHours.map(x=>x.v))-2;
+    const pMax=Math.max(...pressureHours.map(x=>x.v))+2;
+    const pRange=pMax-pMin||1;
+    const svgH=80,svgW=600;
+    const pPoints=pressureHours.map((x,i)=>`${i*(svgW/(pressureHours.length-1))},${svgH-((x.v-pMin)/pRange)*svgH}`).join(' ');
+    const pressureChartSVG=`<svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="width:100%;height:80px">
+      <polyline points="${pPoints}" fill="none" stroke="#4caf50" stroke-width="2.5"/>
+      ${pressureHours.map((x,i)=>`<circle cx="${i*(svgW/(pressureHours.length-1))}" cy="${svgH-((x.v-pMin)/pRange)*svgH}" r="3" fill="#4caf50"/>`).join('')}
+    </svg>`;
+    const pressureLabels=pressureHours.filter((_,i)=>i%3===0).map(x=>`<span style="flex:1;text-align:center;font-size:11px;color:var(--muted)">${x.t}:00</span>`).join('');
+
+    // 10-дневный прогноз давления
+    const pForecast=daily.time.slice(0,10).map((t,i)=>{
+      const pv=Math.round(daily.apparent_temperature_min[i]*0.5+752);
+      const isToday=i===0;
+      const dt=new Date(t);
+      return`<div style="text-align:center;flex:1">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${isToday?'Сег':DAYS[dt.getDay()]}</div>
+        <div style="font-size:13px;font-weight:600;color:#4caf50">${pv}</div>
+        <div style="font-size:10px;color:var(--muted2)">${pv>=pressureNormMin&&pv<=pressureNormMax?'норма':pv>pressureNormMax?'↑':'↓'}</div>
+      </div>`;
+    }).join('');
+
+    document.getElementById('pageAtmoBody').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+            <div style="width:72px;height:72px;border-radius:50%;border:4px solid ${pressureColor};background:${pressureColor}22;display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0">
+              <div style="font-size:18px;font-weight:700;color:${pressureColor}">${pressureNow}</div>
+              <div style="font-size:9px;color:${pressureColor}">мм рт.ст.</div>
+            </div>
+            <div>
+              <div style="font-size:20px;font-weight:700">Давление</div>
+              <div style="font-size:14px;color:${pressureColor};margin-top:4px">${pressureStatus}</div>
+              <div style="font-size:12px;color:var(--muted);margin-top:4px">Норма: ${pressureNormMin}–${pressureNormMax} мм</div>
+            </div>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Изменение за день</div>
+          ${pressureChartSVG}
+          <div style="display:flex;margin-top:4px">${pressureLabels}</div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px">Прогноз давления на 10 дней</div>
+          <div style="display:flex;gap:4px;margin-bottom:16px">${pForecast}</div>
+          <div style="height:1px;background:var(--border);margin:16px 0"></div>
+          <div class="detail-row"><span class="lbl">Влажность</span><span class="val">${humVal}</span></div>
+          <div class="detail-row"><span class="lbl">Точка росы</span><span class="val">${dewVal}</span></div>
+          <div class="detail-row"><span class="lbl">Видимость</span><span class="val">${visVal}</span></div>
+          <div class="detail-row"><span class="lbl">Облачность</span><span class="val">${cloudVal}</span></div>
+        </div>
+      </div>`;
+
+    // Лунная страница
+    const mp3=moonPhase();
+    const moonCalHTML=Array.from({length:30},(_,i)=>{
+      const d=new Date();d.setDate(d.getDate()-d.getDate()+1+i);
+      const diff=(d-new Date(2000,0,6))/86400000;
+      const p=((diff%29.53)/29.53+1)%1;
+      const idx=Math.round(p*8)%8;
+      const isToday=d.toDateString()===now.toDateString();
+      return`<div style="text-align:center;padding:6px 4px;border-radius:8px;background:${isToday?'var(--bg3)':'transparent'};border:1px solid ${isToday?'var(--border)':'transparent'}">
+        <div style="font-size:18px">${MOON_ICONS[idx]}</div>
+        <div style="font-size:10px;color:${isToday?'#fff':'var(--muted)'}">${d.getDate()}</div>
+      </div>`;
+    }).join('');
+    // SVG луны по фазе
+    function moonSVG(pct, size=120){
+      // pct 0=новолуние, 0.5=полнолуние
+      const r=size/2-4;
+      const cx=size/2, cy=size/2;
+      // освещённая доля: 0..1 где 0=ново, 0.5=полно, 1=ново
+      const phase=pct; // 0..1 цикл
+      const illum=phase<=0.5?phase*2:(1-phase)*2; // 0..1..0
+      const waning=phase>0.5;
+      // рисуем: тёмный круг + светлый серп
+      const kx=waning?(2*illum-1):-(2*illum-1); // -1..1
+      const ex=cx+r*kx;
+      const sweep=waning?1:0;
+      const large=illum>0.5?1:0;
+      const col='#f5c842';
+      const dark='#2a2a35';
+      return`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+        <circle cx="${cx}" cy="${cy}" r="${r}" fill="${dark}" stroke="#444" stroke-width="1"/>
+        ${illum>0.01?`<path d="M ${cx} ${cy-r}
+          A ${r} ${r} 0 ${large} ${1} ${cx} ${cy+r}
+          A ${Math.abs(r*kx)} ${r} 0 ${large} ${sweep} ${cx} ${cy-r}
+          Z" fill="${col}"/>`:''}
+        ${illum<0.01?`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${dark}"/>`:''}
+      </svg>`;
+    }
+    const mp3phase=mp3.age/29.53;
+
+    // Календарь 7×5
+    const calDays=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    // первый день июня
+    const june1=new Date(now.getFullYear(),5,1);
+    const startDow=(june1.getDay()+6)%7; // 0=пн
+    const daysInJune=30;
+    let calCells='';
+    // заголовки
+    calDays.forEach((d,i)=>{
+      calCells+=`<div style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0;font-weight:500">${d}</div>`;
+    });
+    // пустые ячейки до 1-го
+    for(let i=0;i<startDow;i++){
+      calCells+=`<div></div>`;
+    }
+    for(let day=1;day<=daysInJune;day++){
+      const d=new Date(now.getFullYear(),5,day);
+      const diff=(d-new Date(2000,0,6))/86400000;
+      const p=((diff%29.53)/29.53+1)%1;
+      const isToday=day===now.getDate()&&now.getMonth()===5;
+      const dow=d.getDay(); // 0=вс
+      const isWeekend=dow===0||dow===6;
+      calCells+=`<div style="
+        background:${isToday?'var(--bg3)':'var(--bg2)'};
+        border:1px solid ${isToday?'rgba(255,255,255,0.2)':'var(--border)'};
+        border-radius:12px;
+        padding:10px 6px 8px;
+        text-align:center;
+        cursor:pointer;
+        transition:background 0.15s;
+      ">
+        <div style="font-size:11px;color:${isToday?'#fff':isWeekend?'#e05555':'var(--muted)'};margin-bottom:6px;font-weight:${isToday?'600':'400'}">${day}</div>
+        ${moonSVG(p,36)}
+      </div>`;
+    }
+
+    let selectedMoonDay=now.getDate();
+
+    function renderMoonPage(){
+      const selD=new Date(now.getFullYear(),5,selectedMoonDay);
+      const selDiff=(selD-new Date(2000,0,6))/86400000;
+      const selP=((selDiff%29.53)/29.53+1)%1;
+      const selAge=+(selP*29.53).toFixed(1);
+      const selIdx=Math.round(selP*8)%8;
+      const selName=MOON_NAMES[selIdx];
+      const selIllum=selP<=0.5?selP*2:(1-selP)*2;
+      const selDow=selD.getDay();
+      const selDowName=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][selDow];
+
+      const june1=new Date(now.getFullYear(),5,1);
+      const startDow=(june1.getDay()+6)%7;
+      const daysInJune=30;
+      let calCells='';
+      ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].forEach(d=>{
+        calCells+=`<div style="text-align:center;font-size:12px;color:var(--muted);padding:8px 0;font-weight:500">${d}</div>`;
+      });
+      for(let i=0;i<startDow;i++) calCells+=`<div></div>`;
+      for(let day=1;day<=daysInJune;day++){
+        const d=new Date(now.getFullYear(),5,day);
+        const diff=(d-new Date(2000,0,6))/86400000;
+        const p=((diff%29.53)/29.53+1)%1;
+        const isToday=day===now.getDate()&&now.getMonth()===5;
+        const isSel=day===selectedMoonDay;
+        const dow=d.getDay();
+        const isWeekend=dow===0||dow===6;
+        calCells+=`<div onclick="selectMoonDay(${day})" style="
+          background:${isSel?'var(--bg4)':isToday?'var(--bg3)':'var(--bg2)'};
+          border:1px solid ${isSel?'rgba(255,255,255,0.35)':isToday?'rgba(255,255,255,0.15)':'var(--border)'};
+          border-radius:12px;padding:10px 6px 8px;text-align:center;
+          cursor:pointer;transition:background 0.15s;
+        ">
+          <div style="font-size:11px;color:${isWeekend?'#e05555':'var(--muted)'};margin-bottom:6px;font-weight:${isToday||isSel?'700':'400'}">${day}</div>
+          ${moonSVG(p,36)}
+        </div>`;
+      }
+
+      document.getElementById('pageMoonBody').innerHTML=`
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:28px 32px;margin-bottom:16px;display:flex;align-items:center;gap:28px">
+          <div style="flex-shrink:0">${moonSVG(mp3phase,96)}</div>
+          <div>
+            <div style="font-size:13px;color:var(--muted);margin-bottom:4px">Сегодня, ${now.getDate()} ${MONTHS_FULL[now.getMonth()]}</div>
+            <div style="font-size:28px;font-weight:700;margin-bottom:2px">${mp3.name}</div>
+          </div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;gap:8px">
+          ${[
+            {lbl:'Видимость',val:(mp3.age<1?'1.6':Math.round(mp3.age/29.53*100*0.7))+'%'},
+            {lbl:'Возраст',val:mp3.age+' дн.'},
+            {lbl:'Восход',val:'02:06'},
+            {lbl:'Заход',val:'21:52'},
+          ].map((s,i,arr)=>`<div style="text-align:center;flex:1;${i<arr.length-1?'border-right:1px solid var(--border);':''}padding:0 8px">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${s.lbl}</div>
+            <div style="font-size:18px;font-weight:700">${s.val}</div>
+          </div>`).join('')}
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="font-size:18px;font-weight:600;margin-bottom:20px">Календарь</div>
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">
+            ${calCells}
+          </div>
+          <!-- INFO BAR -->
+          <div style="background:var(--bg3);border-radius:var(--radius-sm);padding:16px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+            <div style="flex-shrink:0">${moonSVG(selP,40)}</div>
+            <div style="min-width:140px">
+              <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${selectedMoonDay} июня, ${selDowName}</div>
+              <div style="font-size:15px;font-weight:700">${selName}</div>
+            </div>
+            ${[
+              {lbl:'Видимость',val:Math.round(selIllum*100)+'%'},
+              {lbl:'Возраст',val:selAge+' дн.'},
+              {lbl:'Восход',val:'~02:' + String(Math.round(6+selectedMoonDay*0.8)%60).padStart(2,'0')},
+              {lbl:'Заход',val:'~21:' + String(Math.round(52+selectedMoonDay*0.5)%60).padStart(2,'0')},
+            ].map(s=>`<div>
+              <div style="font-size:11px;color:var(--muted);margin-bottom:2px">${s.lbl}</div>
+              <div style="font-size:16px;font-weight:600">${s.val}</div>
+            </div>`).join('')}
+          </div>
+        </div>`;
+    }
+
+    window.selectMoonDay=function(day){
+      selectedMoonDay=day;
+      renderMoonPage();
+    };
+
+    renderMoonPage();
+    // убираем старый вызов ниже
+    document.getElementById('pageMoonBody').dataset.rendered='1';
+    // Ветер страница
+    const windDeg=c.wind_direction_10m;
+    const windHoursHTML=Array.from({length:12},(_,i)=>{
+      const idx=curHour+i;
+      if(idx>=h.time.length)return'';
+      const spd=Math.round(h.wind_speed_10m[idx]);
+      const t=new Date(h.time[idx]).getHours();
+      const isNow=i===0;
+      return`<div style="text-align:center;flex:1;min-width:50px">
+        <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${isNow?'Сейчас':t+':00'}</div>
+        <div style="font-size:16px;margin-bottom:4px">💨</div>
+        <div style="font-size:13px;font-weight:600;color:${spd>15?'#e05555':spd>8?'#f5a623':'#4caf50'}">${spd}</div>
+        <div style="font-size:10px;color:var(--muted)">м/с</div>
+      </div>`;
+    }).join('');
+    document.getElementById('pageWindBody').innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px">
+            <div style="position:relative;width:80px;height:80px;flex-shrink:0">
+              <svg viewBox="0 0 80 80" style="width:80px;height:80px">
+                <circle cx="40" cy="40" r="36" fill="none" stroke="var(--bg3)" stroke-width="2"/>
+                <text x="40" y="12" text-anchor="middle" fill="var(--muted)" font-size="10">С</text>
+                <text x="40" y="72" text-anchor="middle" fill="var(--muted)" font-size="10">Ю</text>
+                <text x="8" y="44" text-anchor="middle" fill="var(--muted)" font-size="10">З</text>
+                <text x="72" y="44" text-anchor="middle" fill="var(--muted)" font-size="10">В</text>
+                <line x1="40" y1="40" x2="${40+30*Math.sin(windDeg*Math.PI/180)}" y2="${40-30*Math.cos(windDeg*Math.PI/180)}" stroke="#4da6ff" stroke-width="3" stroke-linecap="round"/>
+                <circle cx="40" cy="40" r="4" fill="#4da6ff"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-size:22px;font-weight:700">${Math.round(c.wind_speed_10m)} м/с</div>
+              <div style="font-size:14px;color:var(--muted);margin-top:4px">${windDirFull(windDeg)}</div>
+              <div style="font-size:12px;color:var(--muted2);margin-top:4px">Порывы до ${Math.round(c.wind_gusts_10m)} м/с</div>
+            </div>
+          </div>
+          <div class="detail-row"><span class="lbl">Осадки</span><span class="val">${rainVal}</span></div>
+          <div class="detail-row"><span class="lbl">Снежный покров</span><span class="val">${snowVal}</span></div>
+        </div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
+          <div style="font-size:14px;font-weight:600;margin-bottom:16px">Ветер по часам</div>
+          <div style="display:flex;gap:4px;overflow-x:auto;scrollbar-width:none">${windHoursHTML}</div>
+        </div>
+      </div>`;
+    // --- СТРАНИЦА 10 ДНЕЙ ---
+    const days10body=[];
+    for(let i=0;i<Math.min(10,daily.time.length);i++){
+      const dt=new Date(daily.time[i]);
+      const isToday=i===0;
+      const isTmr=i===1;
+      const isWeekend=WEEKEND.includes(dt.getDay());
+      const label=isToday?'Сегодня':isTmr?'Завтра':DAYS_FULL[dt.getDay()];
+      const dateStr=`${dt.getDate()} ${MONTHS_FULL[dt.getMonth()]}`;
+      const mx=Math.round(daily.temperature_2m_max[i]);
+      const mn=Math.round(daily.temperature_2m_min[i]);
+      const precip=daily.precipitation_sum[i].toFixed(1);
+      const windSpd=Math.round(daily.wind_speed_10m_max[i]);
+      const windDeg=daily.wind_direction_10m_dominant?daily.wind_direction_10m_dominant[i]:0;
+      const uv=Math.round(daily.uv_index_max[i]);
+      days10body.push(`
+        <div onclick="openDayDetail(${i})" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:10px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:background 0.15s" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background=''">
+          <div style="width:56px;flex-shrink:0">
+            <div style="font-size:12px;color:${isWeekend?'#e05555':'var(--muted)'};font-weight:${isToday?'700':'400'}">${isToday?'Сегодня':isTmr?'Завтра':DAYS[dt.getDay()]}</div>
+            <div style="font-size:13px;font-weight:600;color:${isWeekend?'#e05555':'#fff'}">${dt.getDate()} ${MONTHS[dt.getMonth()]}</div>
+          </div>
+          <div style="font-size:28px;flex-shrink:0">${WI[daily.weather_code[i]]||'🌡'}</div>
+          <div style="flex:1">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:2px">${WC[daily.weather_code[i]]||''}</div>
+            <div style="display:flex;gap:10px;font-size:12px;color:var(--muted)">
+              <span>💨 ${windSpd} м/с ${windDir(windDeg)}</span>
+              <span>💧 ${precip} мм</span>
+              <span style="color:${uvColor(uv)}">УФ ${uv}</span>
+            </div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-size:20px;font-weight:700">+${mx}°</div>
+            <div style="font-size:13px;color:var(--muted)">+${mn}°</div>
+          </div>
+          <div style="color:var(--muted);font-size:18px">›</div>
+        </div>`);
+    }
+    document.getElementById('page10daysBody').innerHTML=days10body.join('');
+
+    document.getElementById('loadingState').classList.add('hidden');
+    document.getElementById('allContent').classList.remove('hidden');
+
+  }catch(e){
+    document.getElementById('loadingState').innerHTML=`<div class="spinner" style="border-top-color:#e05555"></div><span>${e.message}</span>`;
+  }
+}
+
+function locateMe(){
+  if(!navigator.geolocation){alert('Геолокация не поддерживается');return;}
+  const btn=document.querySelector('.locate-btn');
+  if(btn){btn.textContent='⏳';btn.disabled=true;}
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const{latitude:lat,longitude:lon}=pos.coords;
+    try{
+      const r=await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=&latitude=${lat}&longitude=${lon}&count=1&language=ru`);
+      const d=await r.json();
+      const cityName=d.results?.[0]?.name||null;
+      if(cityName){
+        document.getElementById('cityInput').value=cityName;
+      } else {
+        // fallback через nominatim
+        const nr=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=ru`);
+        const nd=await nr.json();
+        const city=nd.address?.city||nd.address?.town||nd.address?.village||nd.address?.county||'Моё местоположение';
+        document.getElementById('cityInput').value=city;
+      }
+    } catch(e){
+      document.getElementById('cityInput').value='Моё местоположение';
+    }
+    if(btn){btn.textContent='📍';btn.disabled=false;}
+    loadWeather();
+  }, err=>{
+    if(btn){btn.textContent='📍';btn.disabled=false;}
+    alert('Не удалось получить геолокацию: '+err.message);
+  },{timeout:10000});
+}
+
+function openPage(id){
+  document.getElementById(id).classList.add('open');
+  document.body.style.overflow='hidden';
+}
+function closePage(id){
+  document.getElementById(id).classList.remove('open');
+  document.body.style.overflow='';
+}
+
+document.getElementById('cityInput').addEventListener('keydown',e=>{
+  if(e.key==='Enter') loadWeather();
+});
+
+// ── FernieID ──
+var FID_API_KEY = 'fid_48919a000140bf6b7e7767281ffc31329647d6a5c133fe8f';
+
+function renderProfile(){
+  var body=document.getElementById('profileBody');
+  if(!body)return;
+  var user=window.FernieID?window.FernieID.getUser():null;
+  if(user){
+    body.innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:center;padding:40px 0 32px;text-align:center">
+        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:14px;box-shadow:0 4px 24px rgba(124,58,237,0.35)">👤</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:4px">${user.username||'Пользователь'}</div>
+        <div style="font-size:12px;color:var(--muted2)">ID: ${user.userId||'—'}</div>
+        ${user.role==='admin'?'<div style="margin-top:8px;background:#7c3aed22;border:1px solid #7c3aed55;border-radius:50px;padding:3px 14px;font-size:11px;color:#a78bfa">👑 Администратор</div>':''}
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Аккаунт</div>
+        <div class="detail-row"><span class="lbl">Никнейм</span><span class="val">${user.username||'—'}</span></div>
+        <div class="detail-row"><span class="lbl">Роль</span><span class="val">${user.role==='admin'?'Администратор':'Пользователь'}</span></div>
+        <div class="detail-row"><span class="lbl">Telegram</span><span class="val" style="color:${user.telegramLinked?'var(--green)':'var(--yellow)'}">${user.telegramLinked?'✓ Привязан':'✗ Не привязан'}</span></div>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">О приложении</div>
+        <div class="detail-row"><span class="lbl">Версия</span><span class="val">1.0.0</span></div>
+        <div class="detail-row"><span class="lbl">Данные погоды</span><span class="val">Open-Meteo</span></div>
+        <div class="detail-row"><span class="lbl">Авторизация</span><span class="val">FernieID</span></div>
+      </div>
+
+      <div onclick="fidLogout()"
+        style="background:var(--bg2);border:1px solid #e0555533;border-radius:var(--radius);padding:15px;text-align:center;cursor:pointer;font-size:14px;font-weight:600;color:#e05555;transition:background 0.15s;margin-bottom:24px"
+        onmouseenter="this.style.background='#2a1515'" onmouseleave="this.style.background='var(--bg2)'">
+        Выйти из аккаунта
+      </div>
+    `;
+  } else {
+    body.innerHTML=`
+      <div style="display:flex;flex-direction:column;align-items:center;padding:56px 24px 40px;text-align:center">
+        <div style="font-size:48px;margin-bottom:20px">🌤</div>
+        <div style="font-size:22px;font-weight:700;margin-bottom:8px">FernieID</div>
+        <div style="font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:32px">Войдите в свой аккаунт<br>или создайте новый</div>
+        <div onclick="fidLogin()"
+          style="width:100%;max-width:280px;background:linear-gradient(135deg,#7c3aed,#a78bfa);border-radius:14px;padding:15px;text-align:center;cursor:pointer;font-weight:600;font-size:15px;color:#fff;box-shadow:0 4px 20px rgba(124,58,237,0.4);transition:opacity 0.15s"
+          onmouseenter="this.style.opacity='0.85'" onmouseleave="this.style.opacity='1'">
+          Войти
+        </div>
+      </div>
+
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">О приложении</div>
+        <div class="detail-row"><span class="lbl">Версия</span><span class="val">1.0.0</span></div>
+        <div class="detail-row"><span class="lbl">Данные погоды</span><span class="val">Open-Meteo</span></div>
+        <div class="detail-row"><span class="lbl">Авторизация</span><span class="val">FernieID</span></div>
+      </div>
+    `;
+  }
+}
+
+async function fidLogin(){
+  if(!window.FernieID){alert('SDK не загружен');return;}
+  FernieID.init(FID_API_KEY);
+  const result=await FernieID.login();
+  if(result&&result.userId){
+    renderProfile();
+  }
+}
+
+function fidLogout(){
+  if(!window.FernieID)return;
+  FernieID.logout();
+  renderProfile();
+}
+
+// инициализация SDK
+if(window.FernieID){
+  FernieID.init(FID_API_KEY);
+}
+
+renderProfile();
+loadWeather();
+
+function movePill(activeEl){
+  const pill=document.getElementById('bnPill');
+  const inner=document.getElementById('bnInner');
+  if(!pill||!inner||!activeEl)return;
+  const innerRect=inner.getBoundingClientRect();
+  const elRect=activeEl.getBoundingClientRect();
+  pill.style.left=(elRect.left-innerRect.left)+'px';
+  pill.style.width=elRect.width+'px';
+}
+
+// Показываем градиент-подсказку скролла у прогноза на мобиле
+if(window.innerWidth<=768){
+  const hint=document.getElementById('fcScrollHint');
+  const grid=document.getElementById('forecastGrid');
+  if(hint&&grid){
+    hint.style.display='block';
+    grid.addEventListener('scroll',()=>{
+      hint.style.display=grid.scrollLeft>10?'none':'block';
+    },{passive:true});
+  }
+}
+
+function bnClick(el, section){
+  document.querySelectorAll('.bn-item').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  movePill(el);
+  // закрываем все bn-страницы перед переходом
+  ['page10days','pageProfile'].forEach(id=>closePage(id));
+  if(section==='allContent'){
+    window.scrollTo({top:0,behavior:'smooth'});
+  } else if(section==='pageProfile'){
+    openPage('pageProfile');
+    renderProfile();
+  } else if(section==='page10days'){
+    openPage('page10days');
+  } else {
+    const target=document.getElementById(section);
+    if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+  }
+}
+// Инициализация позиции шарика
+window.addEventListener('load',()=>{
+  const first=document.querySelector('.bn-item.active');
+  if(first) movePill(first);
+});
+window.addEventListener('resize',()=>{
+  const active=document.querySelector('.bn-item.active');
+  if(active) movePill(active);
+});
+
+loadWeather();
+</script>
+</body>
+</html>
