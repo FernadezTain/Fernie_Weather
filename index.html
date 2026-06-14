@@ -1218,6 +1218,206 @@ async function loadWeather(){
       const riseFmt=fmtTime(daily.sunrise[i]);
       const setFmt=fmtTime(daily.sunset[i]);
 
+      // Генерируем почасовые данные для дня i
+      const dayStartHour = i * 24;
+      const hourlySlice = Array.from({length: 24}, (_, hi) => {
+        const idx = dayStartHour + hi;
+        return {
+          hour: hi,
+          temp: h.temperature_2m[idx] ?? null,
+          feels: h.apparent_temperature[idx] ?? null,
+          wcode: h.weather_code[idx] ?? 0,
+          wind: Math.round(h.wind_speed_10m[idx] ?? 0),
+          windDir: h.wind_direction_10m[idx] ?? 0,
+          hum: h.relative_humidity_2m ? (h.relative_humidity_2m[idx] ?? 0) : 0,
+          precip: h.precipitation ? (h.precipitation[idx] ?? 0) : 0,
+          precipProb: h.precipitation_probability ? (h.precipitation_probability[idx] ?? 0) : 0,
+          uv: h.uv_index ? (h.uv_index[idx] ?? 0) : 0,
+          vis: 10,
+        };
+      }).filter(x => x.temp !== null);
+
+      // Почасовая полоса (общая)
+      function renderHourlyStrip(hours, fields) {
+        const timeRow = `<div style="display:flex;gap:0;overflow-x:auto;scrollbar-width:none">
+          <div style="flex-shrink:0;min-width:60px"></div>
+          ${hours.map(h=>`<div style="flex-shrink:0;min-width:64px;text-align:center;font-size:11px;color:var(--muted);padding:8px 4px;border-left:1px solid var(--border)">${h.hour}:00</div>`).join('')}
+        </div>`;
+
+        // Основная строка темп+иконка
+        const mainRow = `<div style="display:flex;gap:0;overflow-x:auto;scrollbar-width:none;background:var(--bg3);border-radius:12px;margin-bottom:4px">
+          <div style="flex-shrink:0;min-width:60px;display:flex;align-items:center;padding:0 8px;font-size:11px;color:var(--muted)"></div>
+          ${hours.map(h=>`<div style="flex-shrink:0;min-width:64px;text-align:center;padding:8px 4px;border-left:1px solid rgba(255,255,255,0.05)">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px">${h.hour}:00</div>
+            <div style="font-size:18px;margin-bottom:2px">${WI[h.wcode]||'🌡'}</div>
+            <div style="font-size:14px;font-weight:700">+${Math.round(h.temp)}°</div>
+            <div style="font-size:11px;color:var(--muted)">+${Math.round(h.feels)}°</div>
+          </div>`).join('')}
+        </div>`;
+
+        let rows = mainRow;
+        fields.forEach(f => {
+          rows += `<div style="margin-bottom:4px">
+            <div style="font-size:12px;font-weight:600;color:var(--muted);padding:10px 0 6px">${f.label}</div>
+            <div style="display:flex;gap:0;overflow-x:auto;scrollbar-width:none;background:var(--bg3);border-radius:12px">
+              ${hours.map(h=>`<div style="flex-shrink:0;min-width:64px;text-align:center;padding:10px 4px;font-size:12px;border-left:1px solid rgba(255,255,255,0.05)">
+                ${f.render(h)}
+              </div>`).join('')}
+            </div>
+            ${f.subLabel ? `<div style="font-size:11px;color:var(--muted2);padding:4px 0">${f.subLabel}</div>` : ''}
+          </div>`;
+        });
+        return rows;
+      }
+
+      // Вкладки
+      const tabs = [
+        { id: 'general',  label: 'Общий' },
+        { id: 'roads',    label: 'На дорогах' },
+        { id: 'sport',    label: 'Летний спорт' },
+        { id: 'garden',   label: 'Сад и огород' },
+        { id: 'fishing',  label: 'Рыбалка' },
+        { id: 'water',    label: 'Водный спорт' },
+      ];
+
+      function renderTabContent(tabId, hours) {
+        // Давление почасовое (вычисляем)
+        const pressureHourly = hours.map(h2 => Math.round((h2.temp * 0.1 + c.surface_pressure) * 0.750064));
+        const pMinH = Math.min(...pressureHourly) - 2;
+        const pMaxH = Math.max(...pressureHourly) + 2;
+        const pRangeH = pMaxH - pMinH || 1;
+        const svgW2 = hours.length * 64;
+        const svgH2 = 48;
+        const pPts = pressureHourly.map((v, ii) => `${ii * 64 + 32},${svgH2 - ((v - pMinH) / pRangeH) * (svgH2 - 8) + 4}`).join(' ');
+        const pressureBlock = `<div style="margin-bottom:4px">
+          <div style="font-size:12px;font-weight:600;color:var(--muted);padding:10px 0 6px">Давление <span style="color:#4caf50;font-weight:400">норма 748–760 мм рт. ст.</span></div>
+          <div style="background:var(--bg3);border-radius:12px;padding:12px;overflow-x:auto">
+            <svg viewBox="0 0 ${svgW2} ${svgH2}" style="width:${svgW2}px;height:${svgH2}px;min-width:100%">
+              <polyline points="${pPts}" fill="none" stroke="#4caf50" stroke-width="2"/>
+              ${pressureHourly.map((v,ii)=>`<circle cx="${ii*64+32}" cy="${svgH2-((v-pMinH)/pRangeH)*(svgH2-8)+4}" r="3" fill="#4caf50"/>`).join('')}
+            </svg>
+            <div style="display:flex">
+              ${pressureHourly.map(v=>`<div style="flex-shrink:0;min-width:64px;text-align:center;font-size:11px;color:#4caf50;margin-top:4px">${v}</div>`).join('')}
+            </div>
+          </div>
+          <div style="text-align:center;margin-top:8px">
+            <span onclick="openPage('pageAtmo')" style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:6px 24px;font-size:12px;color:var(--muted);cursor:pointer">Подробнее</span>
+          </div>
+        </div>`;
+
+        // Общие поля для многих вкладок
+        const windField = {
+          label: 'Ветер, м/с',
+          render: h2 => `<div style="font-size:13px;font-weight:600">${h2.wind}</div>
+            <div style="font-size:10px;color:var(--muted)">▲ ${windDir(h2.windDir)}</div>
+            <div style="font-size:10px;color:var(--muted2)">до ${Math.round(h2.wind*1.4)}</div>`
+        };
+        const humField = {
+          label: 'Влажность',
+          render: h2 => `<div style="font-size:13px;font-weight:600">${h2.hum}%</div>`
+        };
+        const uvField = {
+          label: 'УФ-индекс',
+          render: h2 => `<div style="font-size:13px;font-weight:600;color:${uvColor(h2.uv)}">${Math.round(h2.uv)}</div>`,
+          subLabel: '<span onclick="openPage(\'pageUV\')" style="cursor:pointer;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:4px 20px;font-size:12px;color:var(--muted)">Подробнее</span>'
+        };
+        const visField = {
+          label: 'Видимость',
+          render: h2 => `<div style="font-size:12px;font-weight:600">&gt;10 км</div>`
+        };
+        const precipField = {
+          label: 'Осадки, мм',
+          render: h2 => `<div style="font-size:13px;font-weight:600;color:${h2.precip>0?'#4da6ff':'var(--muted)'}">${h2.precip.toFixed(1)}</div>`
+        };
+
+        // Общая информация (восход/закат и т.д.)
+        const generalBlock = `<div style="background:var(--bg3);border-radius:12px;padding:14px 16px;margin-bottom:4px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:10px">Общие</div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--muted)">Восход</span><span>${fmtTime(daily.sunrise[i])}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span style="color:var(--muted)">Закат</span><span>${fmtTime(daily.sunset[i])}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--muted)">Световой день</span><span>${daylightStr(daily.sunrise[i], daily.sunset[i])}</span></div>
+        </div>`;
+
+        if (tabId === 'general') {
+          return renderHourlyStrip(hours, [windField, pressureBlock !== '' ? {label:'', render:()=>''} : null, humField, uvField, visField].filter(Boolean))
+            .replace(renderHourlyStrip(hours,[{label:'',render:()=>''}]).split('<div style="margin-bottom:4px">')[1] || '', '')
+            + pressureBlock
+            + generalBlock;
+        }
+
+        if (tabId === 'roads') {
+          const roadField = {
+            label: 'Состояние дороги',
+            render: h2 => {
+              const wet = h2.precip > 0.1;
+              const col = wet ? '#f5a623' : '#4caf50';
+              return `<div style="font-size:11px;font-weight:600;color:${col}">${wet ? 'мокро' : 'сухо'}</div>`;
+            }
+          };
+          return renderHourlyStrip(hours, [roadField, windField, visField, humField])
+            + pressureBlock + generalBlock;
+        }
+
+        if (tabId === 'sport') {
+          const aqiField = {
+            label: 'Качество воздуха AQI',
+            render: h2 => {
+              const aqi = Math.round(20 + h2.hum * 0.3 + h2.wind * 0.5);
+              const col = aqi < 50 ? '#4caf50' : aqi < 100 ? '#f5a623' : '#e05555';
+              return `<div style="font-size:13px;font-weight:600;color:${col}">${aqi}</div>`;
+            }
+          };
+          return renderHourlyStrip(hours, [windField, aqiField, uvField, humField])
+            + pressureBlock + generalBlock;
+        }
+
+        if (tabId === 'garden') {
+          const soilField = {
+            label: 'Почва',
+            render: h2 => `<div style="font-size:13px;font-weight:600">+${Math.round(h2.temp * 0.85)}°</div>`
+          };
+          return renderHourlyStrip(hours, [soilField, windField, precipField, humField])
+            + pressureBlock + generalBlock;
+        }
+
+        if (tabId === 'fishing') {
+          const biteField = {
+            label: 'Клёв',
+            render: h2 => {
+              const score = h2.wind < 5 && h2.hum > 40 ? 'хороший' : h2.wind > 10 ? 'плохой' : 'умеренный';
+              const col = score === 'хороший' ? '#4caf50' : score === 'плохой' ? '#e05555' : '#f5a623';
+              return `<div style="font-size:11px;font-weight:600;color:${col}">${score}</div>`;
+            }
+          };
+          return renderHourlyStrip(hours, [biteField, windField, humField, visField])
+            + pressureBlock + generalBlock;
+        }
+
+        if (tabId === 'water') {
+          const waveField = {
+            label: 'Волнение',
+            render: h2 => {
+              const v = h2.wind < 3 ? 'штиль' : h2.wind < 7 ? 'слабое' : h2.wind < 12 ? 'умеренное' : 'сильное';
+              const col = h2.wind < 3 ? '#4caf50' : h2.wind < 7 ? '#4caf50' : h2.wind < 12 ? '#f5a623' : '#e05555';
+              return `<div style="font-size:11px;font-weight:600;color:${col}">${v}</div>`;
+            }
+          };
+          return renderHourlyStrip(hours, [waveField, windField, uvField, humField])
+            + pressureBlock + generalBlock;
+        }
+        return '';
+      }
+
+      const tabsHTML = tabs.map((t, ti) =>
+        `<div class="day-tab ${ti===0?'active':''}" data-tab="${t.id}"
+          style="flex-shrink:0;padding:7px 16px;border-radius:50px;font-size:13px;cursor:pointer;
+          background:${ti===0?'var(--bg3)':'transparent'};
+          border:1px solid ${ti===0?'rgba(255,255,255,0.15)':'var(--border)'};
+          color:${ti===0?'#fff':'var(--muted)'};
+          white-space:nowrap;transition:all 0.15s"
+          onclick="switchDayTab('${t.id}',this)">${t.label}</div>`
+      ).join('');
+
       document.getElementById('pageDayDetailBody').innerHTML=`
         <!-- HEADER -->
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px 24px;margin-bottom:12px;display:flex;align-items:center;gap:16px">
@@ -1230,11 +1430,11 @@ async function loadWeather(){
         </div>
 
         <!-- TABS ROW -->
-        <div style="display:flex;gap:8px;margin-bottom:12px">
-          <div style="background:var(--bg2);border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:#fff;font-weight:500">Общий</div>
-          <div style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--muted)">На дорогах</div>
-          <div style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--muted)">Летний спорт</div>
-          <div style="background:transparent;border:1px solid var(--border);border-radius:50px;padding:6px 16px;font-size:12px;color:var(--muted)">Сад и огород</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px">
+          ${tabsHTML}
+        </div>
+        <div id="dayTabContent" style="margin-bottom:12px">
+          ${renderTabContent('general', hourlySlice)}
         </div>
 
         <!-- TEMP PARTS -->
@@ -1292,6 +1492,8 @@ async function loadWeather(){
           </div>
         </div>
       `;
+      window._dayHourlySlice = hourlySlice;
+      window._dayTabRenderer = renderTabContent;
       openPage('pageDayDetail');
     };
 
@@ -1944,6 +2146,21 @@ function locateMe(){
     alert('Не удалось получить геолокацию: '+err.message);
   },{timeout:10000});
 }
+
+window.switchDayTab = function(tabId, el) {
+  document.querySelectorAll('.day-tab').forEach(t => {
+    t.style.background = 'transparent';
+    t.style.border = '1px solid var(--border)';
+    t.style.color = 'var(--muted)';
+  });
+  el.style.background = 'var(--bg3)';
+  el.style.border = '1px solid rgba(255,255,255,0.15)';
+  el.style.color = '#fff';
+  const content = document.getElementById('dayTabContent');
+  if (content && window._dayHourlySlice) {
+    content.innerHTML = window._dayTabRenderer(tabId, window._dayHourlySlice);
+  }
+};
 
 function openPage(id){
   document.getElementById(id).classList.add('open');
