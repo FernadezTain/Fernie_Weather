@@ -187,23 +187,21 @@ a{color:inherit;text-decoration:none;}
 /* скользящий шарик */
 .bn-pill{
   position:absolute;
-  top:4px;bottom:4px;
+  top:6px;bottom:6px;
   background:var(--accent);
-  border-radius:50px;
+  border-radius:32px;
   transition:left 0.35s cubic-bezier(.4,0,.2,1), width 0.35s cubic-bezier(.4,0,.2,1);
   box-shadow:0 4px 20px rgba(252,63,29,0.5);
   pointer-events:none;
   z-index:0;
-  aspect-ratio:1;
-  width:auto;
 }
 .bn-item{
   display:flex;flex-direction:column;align-items:center;
-  gap:2px;padding:10px 16px;
+  gap:2px;padding:10px 20px;
   font-size:11px;color:var(--muted);
   cursor:pointer;border:none;background:none;
   transition:color 0.25s ease;
-  border-radius:50px;
+  border-radius:32px;
   position:relative;
   z-index:1;
   white-space:nowrap;
@@ -380,9 +378,12 @@ a{color:inherit;text-decoration:none;}
 }
 .forecast-header{padding:20px 20px 0;margin-bottom:0;}
 .forecast-grid{
-  display:grid;
-  grid-template-columns:repeat(10,1fr);
+  display:flex;
   gap:0;
+}
+.forecast-grid .fc-day-col{
+  flex:0 0 100px;
+  min-width:100px;
 }
 .fc-day-col{
   padding:14px 8px;
@@ -649,7 +650,7 @@ a{color:inherit;text-decoration:none;}
   <div class="main">
     <!-- TOPBAR -->
     <div class="topbar">
-      <button class="locate-btn" onclick="locateMe()">📍</button>
+      <button class="locate-btn" onclick="locateMe()"><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:#fc3f1d;box-shadow:0 2px 8px rgba(252,63,29,0.5)"></span></button>
       <div class="search-box">
         <span style="color:var(--muted);font-size:14px">🔍</span>
         <input type="text" id="cityInput" placeholder="Город..." value="Москва" />
@@ -766,9 +767,9 @@ a{color:inherit;text-decoration:none;}
           <!-- sun bar -->
           <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border)">
             <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:8px">
-              <span>🌅 <span id="sunriseT"></span></span>
+              <span><span style="display:inline-block;width:10px;height:10px;background:linear-gradient(135deg,#f59e0b,#fbbf24);border-radius:50%;margin-right:4px;vertical-align:middle"></span><span id="sunriseT"></span></span>
               <span id="daylightStr" style="color:var(--muted2)"></span>
-              <span><span id="sunsetT"></span> 🌇</span>
+              <span><span id="sunsetT"></span><span style="display:inline-block;width:10px;height:10px;background:linear-gradient(135deg,#f97316,#fb923c);border-radius:50%;margin-left:4px;vertical-align:middle"></span></span>
             </div>
             <div style="height:4px;background:var(--bg3);border-radius:4px;position:relative">
               <div id="sunFill" style="height:100%;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:4px;width:0%;transition:width 1s"></div>
@@ -861,7 +862,7 @@ a{color:inherit;text-decoration:none;}
           <div class="sec-title">Прогноз на 10 дней</div>
           <div class="forecast-card">
             <div style="position:relative">
-              <div class="forecast-grid" id="forecastGrid"></div>
+              <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none" id="forecastScrollWrap"><div class="forecast-grid" id="forecastGrid" style="display:flex;min-width:max-content;width:100%"></div></div>
               <div id="fcScrollHint" style="position:absolute;right:0;top:0;bottom:0;width:40px;background:linear-gradient(to right,transparent,var(--bg2));pointer-events:none;border-radius:0 var(--radius) 0 0;display:none"></div>
             </div>
             <div class="fc-chart" style="overflow-x:hidden"><svg id="fcChartSvg" style="width:100%;height:70px"></svg></div>
@@ -1013,7 +1014,7 @@ function sunProg(rise,set){
 function uvLabel(v){if(v<3)return'Низкий';if(v<6)return'Умеренный';if(v<8)return'Высокий';if(v<11)return'Очень высокий';return'Экстремальный';}
 function uvColor(v){if(v<3)return'#4caf50';if(v<6)return'#f5a623';if(v<8)return'#f08030';if(v<11)return'#e05555';return'#9333ea';}
 function uvSub(v){if(v<3)return'Защита не требуется';if(v<6)return'Используйте SPF';if(v<8)return'Нужна защита';if(v<11)return'Высокая защита';return'Оставайтесь в тени';}
-function pressureLabel(p){if(p>760)return{t:'выше нормы',c:'green'};if(p<748)return{t:'ниже нормы',c:'red'};return{t:'в норме',c:'green'};}
+function pressureLabel(p){if(p>768)return{t:'выше нормы',c:'green'};if(p<740)return{t:'ниже нормы',c:'red'};return{t:'в норме',c:'green'};}
 function kpLabel(k){if(k<=2)return'Спокойное';if(k<=4)return'Слабая буря';if(k<=6)return'Умеренная буря';if(k<=7)return'Сильная буря';return'Экстремальная буря';}
 function kpColor(k){if(k<=2)return'#666';if(k<=4)return'#4a3a10';return'#4a2010';}
 function kpTextColor(k){if(k<=2)return'rgba(255,255,255,0.4)';if(k<=4)return'#f5a623';return'#f08030';}
@@ -1486,7 +1487,7 @@ async function loadWeather(){
 
         <!-- PRESSURE BLOCK -->
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px">
-          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px">Давление <span style="color:#4caf50;font-weight:400">норма ${pressureNormMin}–${pressureNormMax} мм рт. ст.</span></div>
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px">Давление <span style="color:#4caf50;font-weight:400">норма 740–768 мм рт. ст.</span></div>
           <div style="display:flex;margin-bottom:4px;">${pressureLabels}</div>
           ${pressureSVG}
           <div style="display:flex;margin-top:4px;">${pressureNums}</div>
@@ -1723,7 +1724,7 @@ async function loadWeather(){
     const calHTML=`
       <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-top:16px">
         <div style="font-size:16px;font-weight:600;margin-bottom:16px">Календарь цветения</div>
-        <div style="display:grid;grid-template-columns:80px repeat(12,1fr);gap:4px;font-size:11px">
+        <div style="display:grid;grid-template-columns:80px repeat(12,1fr);gap:4px;font-size:11px;overflow-x:auto;min-width:0">
           <div></div>
           ${mNames.map((m,i)=>`<div style="text-align:center;color:${i===now.getMonth()?'#fff':'var(--muted)'};font-weight:${i===now.getMonth()?'600':'400'};padding-bottom:6px">${m}</div>`).join('')}
           ${bloomCalendar.map(p=>`
@@ -1811,7 +1812,7 @@ async function loadWeather(){
     const T=c.temperature_2m,RH=c.relative_humidity_2m;
     const dew=Math.round(T-((100-RH)/5));
     const pl2=pressureLabel(pressureNow);
-    const pressureNormMin=748,pressureNormMax=760;
+    const pressureNormMin=740,pressureNormMax=768;
     const pressureStatus=pressureNow>pressureNormMax?'выше нормы':pressureNow<pressureNormMin?'ниже нормы':'в норме';
     const pressureColor=pressureNow>pressureNormMax?'#4da6ff':pressureNow<pressureNormMin?'#e05555':'#4caf50';
     const pressureVal=`<span style="color:${pressureColor}">${pressureNow} мм</span>`;
@@ -2027,7 +2028,7 @@ async function loadWeather(){
         </div>
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:24px">
           <div style="font-size:18px;font-weight:600;margin-bottom:20px">Календарь</div>
-          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:16px">
+          <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px;align-items:start">
             ${calCells}
           </div>
           <!-- INFO BAR -->
@@ -2289,23 +2290,17 @@ if(window.FernieID){
 renderProfile();
 loadWeather();
 
-function getPillSize(){
-  const inner=document.getElementById('bnInner');
-  const h=inner?inner.clientHeight-8:48;
-  return h;
-}
 function movePill(activeEl){
   const pill=document.getElementById('bnPill');
   const inner=document.getElementById('bnInner');
   if(!pill||!inner||!activeEl)return;
   const innerRect=inner.getBoundingClientRect();
   const elRect=activeEl.getBoundingClientRect();
-  const size=getPillSize();
-  const centerX=elRect.left-innerRect.left+elRect.width/2;
   pill.style.transition='left 0.35s cubic-bezier(.4,0,.2,1), width 0.35s cubic-bezier(.4,0,.2,1), transform 0s';
   pill.style.transform='scaleX(1)';
-  pill.style.width=size+'px';
-  pill.style.left=(centerX-size/2)+'px';
+  pill.style.borderRadius='32px';
+  pill.style.left=(elRect.left-innerRect.left)+'px';
+  pill.style.width=elRect.width+'px';
 }
 (function initDragPill(){
   let startX=0,pillStartLeft=0,pillStartW=0,dragging=false;
@@ -2370,10 +2365,10 @@ function movePill(activeEl){
     const dx=clientX-startX;
     const rawLeft=pillStartLeft+dx;
     const innerW=inner.clientWidth;
-    const size=getPillSize();
-    const {left,scaleX}=clampSqueeze(rawLeft,size,innerW);
+    const {left,scaleX}=clampSqueeze(rawLeft,pillStartW,innerW);
     pill.style.left=left+'px';
-    pill.style.width=size+'px';
+    pill.style.width=pillStartW+'px';
+    pill.style.borderRadius='32px';
     pill.style.transform=`scaleX(${scaleX})`;
     pill.style.transformOrigin=rawLeft<0?'left center':'right center';
   }
@@ -2388,10 +2383,9 @@ function movePill(activeEl){
     const idx=nearestIdx(pillCenter);
     currentIdx=idx;
     pill.style.transition='left 0.4s cubic-bezier(.34,1.56,.64,1), width 0.3s cubic-bezier(.4,0,.2,1), transform 0.3s cubic-bezier(.34,1.56,.64,1)';
-    const size=getPillSize();
-    const centerX=rects[idx].left+rects[idx].width/2;
-    pill.style.left=(centerX-size/2)+'px';
-    pill.style.width=size+'px';
+    pill.style.left=rects[idx].left+'px';
+    pill.style.width=rects[idx].width+'px';
+    pill.style.borderRadius='32px';
     pill.style.transform='scaleX(1)';
     const items=getItems();
     items.forEach((el,i)=>el.classList.toggle('active',i===idx));
