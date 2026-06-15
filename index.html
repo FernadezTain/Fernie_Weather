@@ -38,8 +38,8 @@ a{color:inherit;text-decoration:none;}
   .sidebar{display:none!important;}
   .main{margin-left:0!important;width:100%;}
   .layout{overflow-x:hidden;}
-  .topbar{padding:0 12px;gap:8px;width:100%;}
-  .search-box{max-width:none;flex:1;}
+  .topbar{padding:0 10px;gap:6px;width:100%;}
+  .search-box{max-width:none;flex:1;min-width:0;}
   .content{padding:10px;width:100%;box-sizing:border-box;}
 
   /* HERO */
@@ -166,6 +166,11 @@ a{color:inherit;text-decoration:none;}
   z-index:200;
   padding:12px 24px calc(12px + env(safe-area-inset-bottom,0px));
   pointer-events:none;
+  transform:translateZ(0);
+  -webkit-transform:translateZ(0);
+  will-change:transform;
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
 }
 .bottom-nav-inner{
   display:flex;justify-content:space-around;align-items:center;
@@ -182,21 +187,23 @@ a{color:inherit;text-decoration:none;}
 /* скользящий шарик */
 .bn-pill{
   position:absolute;
-  top:6px;bottom:6px;
+  top:4px;bottom:4px;
   background:var(--accent);
-  border-radius:32px;
+  border-radius:50px;
   transition:left 0.35s cubic-bezier(.4,0,.2,1), width 0.35s cubic-bezier(.4,0,.2,1);
   box-shadow:0 4px 20px rgba(252,63,29,0.5);
   pointer-events:none;
   z-index:0;
+  aspect-ratio:1;
+  width:auto;
 }
 .bn-item{
   display:flex;flex-direction:column;align-items:center;
-  gap:2px;padding:10px 20px;
+  gap:2px;padding:10px 16px;
   font-size:11px;color:var(--muted);
   cursor:pointer;border:none;background:none;
   transition:color 0.25s ease;
-  border-radius:32px;
+  border-radius:50px;
   position:relative;
   z-index:1;
   white-space:nowrap;
@@ -207,7 +214,7 @@ a{color:inherit;text-decoration:none;}
 .bn-label{font-size:10px;letter-spacing:0.2px;}
 @media(max-width:768px){
   .bottom-nav{display:block;}
-  .main{padding-bottom:90px;}
+  .main{padding-bottom:calc(90px + env(safe-area-inset-bottom,0px));}
 }
 
 /* MAIN */
@@ -225,7 +232,7 @@ a{color:inherit;text-decoration:none;}
   height:56px;
   display:flex;
   align-items:center;
-  gap:16px;
+  gap:8px;
   position:sticky;top:0;z-index:9;
 }
 .search-box{
@@ -245,17 +252,20 @@ a{color:inherit;text-decoration:none;}
 .search-box input::placeholder{color:var(--muted);}
 .search-btn{
   background:var(--bg3);border:1px solid var(--border);
-  color:#fff;border-radius:50px;padding:8px 18px;
+  color:#fff;border-radius:50px;padding:8px 14px;
   font-size:13px;cursor:pointer;font-family:'Inter',sans-serif;
   transition:background 0.15s;
+  flex-shrink:0;
+  white-space:nowrap;
 }
 .search-btn:hover{background:var(--bg4);}
 .locate-btn{
   display:flex;align-items:center;gap:6px;
   background:var(--bg2);border:1px solid var(--border);
-  border-radius:50px;padding:8px 14px;
+  border-radius:50px;padding:8px 10px;
   font-size:13px;cursor:pointer;color:var(--muted);
   transition:color 0.15s;
+  flex-shrink:0;
 }
 .locate-btn:hover{color:#fff;}
 
@@ -2279,15 +2289,133 @@ if(window.FernieID){
 renderProfile();
 loadWeather();
 
+function getPillSize(){
+  const inner=document.getElementById('bnInner');
+  const h=inner?inner.clientHeight-8:48;
+  return h;
+}
 function movePill(activeEl){
   const pill=document.getElementById('bnPill');
   const inner=document.getElementById('bnInner');
   if(!pill||!inner||!activeEl)return;
   const innerRect=inner.getBoundingClientRect();
   const elRect=activeEl.getBoundingClientRect();
-  pill.style.left=(elRect.left-innerRect.left)+'px';
-  pill.style.width=elRect.width+'px';
+  const size=getPillSize();
+  const centerX=elRect.left-innerRect.left+elRect.width/2;
+  pill.style.transition='left 0.35s cubic-bezier(.4,0,.2,1), width 0.35s cubic-bezier(.4,0,.2,1), transform 0s';
+  pill.style.transform='scaleX(1)';
+  pill.style.width=size+'px';
+  pill.style.left=(centerX-size/2)+'px';
 }
+(function initDragPill(){
+  let startX=0,pillStartLeft=0,pillStartW=0,dragging=false;
+  let currentIdx=0;
+  const pill=document.getElementById('bnPill');
+  const inner=document.getElementById('bnInner');
+  if(!pill||!inner)return;
+
+  function getItems(){return Array.from(inner.querySelectorAll('.bn-item'));}
+
+  function getItemCenters(){
+    const innerRect=inner.getBoundingClientRect();
+    return getItems().map(el=>{
+      const r=el.getBoundingClientRect();
+      return r.left-innerRect.left+r.width/2;
+    });
+  }
+
+  function getItemRects(){
+    const innerRect=inner.getBoundingClientRect();
+    return getItems().map(el=>{
+      const r=el.getBoundingClientRect();
+      return{left:r.left-innerRect.left,width:r.width};
+    });
+  }
+
+  function clampSqueeze(rawLeft, naturalW, innerW){
+    const maxLeft=innerW-naturalW;
+    const LIMIT=28;
+    if(rawLeft<0){
+      const over=Math.abs(rawLeft);
+      const squeeze=Math.max(0.62,1-over/120);
+      return{left:0,scaleX:squeeze};
+    } else if(rawLeft>maxLeft){
+      const over=rawLeft-maxLeft;
+      const squeeze=Math.max(0.62,1-over/120);
+      return{left:maxLeft,scaleX:squeeze};
+    }
+    return{left:rawLeft,scaleX:1};
+  }
+
+  function nearestIdx(pillCenterX){
+    const centers=getItemCenters();
+    let best=0,bestD=Infinity;
+    centers.forEach((c,i)=>{const d=Math.abs(c-pillCenterX);if(d<bestD){bestD=d;best=i;}});
+    return best;
+  }
+
+  function onStart(clientX){
+    const rects=getItemRects();
+    const pillL=parseFloat(pill.style.left)||rects[currentIdx].left;
+    const pillW=parseFloat(pill.style.width)||rects[currentIdx].width;
+    startX=clientX;
+    pillStartLeft=pillL;
+    pillStartW=pillW;
+    dragging=true;
+    pill.style.transition='none';
+  }
+
+  function onMove(clientX){
+    if(!dragging)return;
+    const dx=clientX-startX;
+    const rawLeft=pillStartLeft+dx;
+    const innerW=inner.clientWidth;
+    const size=getPillSize();
+    const {left,scaleX}=clampSqueeze(rawLeft,size,innerW);
+    pill.style.left=left+'px';
+    pill.style.width=size+'px';
+    pill.style.transform=`scaleX(${scaleX})`;
+    pill.style.transformOrigin=rawLeft<0?'left center':'right center';
+  }
+
+  function onEnd(){
+    if(!dragging)return;
+    dragging=false;
+    const rects=getItemRects();
+    const pillL=parseFloat(pill.style.left)||0;
+    const pillW=parseFloat(pill.style.width)||rects[0].width;
+    const pillCenter=pillL+pillW/2;
+    const idx=nearestIdx(pillCenter);
+    currentIdx=idx;
+    pill.style.transition='left 0.4s cubic-bezier(.34,1.56,.64,1), width 0.3s cubic-bezier(.4,0,.2,1), transform 0.3s cubic-bezier(.34,1.56,.64,1)';
+    const size=getPillSize();
+    const centerX=rects[idx].left+rects[idx].width/2;
+    pill.style.left=(centerX-size/2)+'px';
+    pill.style.width=size+'px';
+    pill.style.transform='scaleX(1)';
+    const items=getItems();
+    items.forEach((el,i)=>el.classList.toggle('active',i===idx));
+    const sections=['allContent','page10days','pageProfile'];
+    ['page10days','pageProfile'].forEach(id=>document.getElementById(id)&&document.getElementById(id).classList.remove('open'));
+    document.body.style.overflow='';
+    if(idx===0){window.scrollTo({top:0,behavior:'smooth'});}
+    else if(idx===1){openPage('page10days');}
+    else if(idx===2){openPage('pageProfile');renderProfile();}
+  }
+
+  inner.addEventListener('touchstart',e=>{
+    if(e.target.closest('.bn-item')||e.target===pill){
+      onStart(e.touches[0].clientX);
+    }
+  },{passive:true});
+  inner.addEventListener('touchmove',e=>{
+    if(!dragging)return;
+    e.preventDefault();
+    onMove(e.touches[0].clientX);
+  },{passive:false});
+  inner.addEventListener('touchend',()=>onEnd());
+  inner.addEventListener('touchcancel',()=>onEnd());
+})();
 
 // Показываем градиент-подсказку скролла у прогноза на мобиле
 if(window.innerWidth<=768){
@@ -2329,7 +2457,6 @@ window.addEventListener('resize',()=>{
   if(active) movePill(active);
 });
 
-loadWeather();
 </script>
 </body>
 </html>
