@@ -696,6 +696,14 @@ h1,h2,h3,.logo,.sec-title,.detail-page-title,.profile-name,.settings-heading h2{
 .setting-switch{appearance:none;width:46px;height:26px;position:relative;flex:none;border-radius:20px;background:#44516a;cursor:pointer;transition:background .2s ease;}.setting-switch::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:white;transition:transform .2s ease;}.setting-switch:checked{background:var(--accent);}.setting-switch:checked::after{transform:translateX(20px);}
 .detail-page.open > .detail-page-body > *, .detail-page.open > .detail-page-body > div > *{animation:fadeUp .55s cubic-bezier(.2,.75,.25,1) both;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px) scale(.99)}to{opacity:1;transform:translateY(0) scale(1)}}
+.slot-number{display:inline-flex;align-items:baseline;vertical-align:baseline;}
+.slot-digit-window{display:inline-block;height:1em;overflow:hidden;vertical-align:top;}
+.slot-digit-track{display:flex;flex-direction:column;line-height:1em;transform:translateY(0);}
+.slot-digit-track span{height:1em;flex:none;}
+.chart-line{stroke-dasharray:1;stroke-dashoffset:1;}
+.chart-point{opacity:0;transform-box:fill-box;transform-origin:center;}
+.gauge-progress{transition:none!important;}
+@keyframes barReveal{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes weatherFloat{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-9px) rotate(3deg)}}
 @keyframes ambientDrift{from{transform:translate3d(0,0,0) scale(.92)}to{transform:translate3d(-30px,28px,0) scale(1.12)}}
 body[data-theme="light"]{--bg:#edf3fc;--bg2:rgba(255,255,255,.84);--bg3:#e5edf8;--bg4:#d9e4f2;--text:#17243a;--muted:rgba(31,49,75,.68);--muted2:rgba(31,49,75,.46);--border:rgba(45,73,112,.13);color-scheme:light;background:radial-gradient(ellipse at 72% -12%,rgba(111,158,232,.23),transparent 42%),#edf3fc;}
@@ -843,8 +851,8 @@ body.animations-disabled .startup-caption{opacity:1;}
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="logo">
-      <button class="logo-icon" type="button" aria-label="Открыть профиль FernieID" onclick="openDesktopProfile()">Я</button>
-      <span onclick="scrollToSection('allContent')" style="cursor:pointer">Fernie Погода</span>
+      <button class="logo-icon" type="button" aria-label="Открыть профиль FernieID" onclick="openDesktopProfile()">FW</button>
+      <span onclick="scrollToSection('allContent')" style="cursor:pointer">Fernie Weather</span>
     </div>
     <div class="nav-item active" data-section="allContent" onclick="scrollToSection('allContent')">Главная</div>
     <div class="nav-item" data-section="hourlySection" onclick="scrollToSection('hourlySection')">Почасовой</div>
@@ -1295,9 +1303,126 @@ function drawGauge(el, value, max, color, label){
   el.innerHTML=`
     <svg viewBox="0 0 ${size} ${size}" style="transform:rotate(-90deg)">
       <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="#333" stroke-width="${stroke}" stroke-dasharray="${circ}" stroke-dashoffset="0"/>
-      <circle cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${circ}" stroke-dashoffset="${circ-dash}" stroke-linecap="round"/>
+      <circle class="gauge-progress" data-gauge-circ="${circ}" data-gauge-offset="${circ-dash}" cx="${size/2}" cy="${size/2}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}" stroke-dasharray="${circ}" stroke-dashoffset="${circ}" stroke-linecap="round"/>
     </svg>
     <div class="wb-gauge-val" style="color:${color}">${label}</div>`;
+}
+
+function animateDigits(element,value){
+  if(!element)return;
+  const text=String(Math.round(Math.abs(Number(value)||0)));
+  if(!window.anime||document.body.classList.contains('animations-disabled')){
+    element.textContent=text;
+    return;
+  }
+  element.innerHTML=`<span class="slot-number" aria-label="${text}">${[...text].map(digit=>`<span class="slot-digit-window"><span class="slot-digit-track">${Array.from({length:10},(_,n)=>`<span>${n}</span>`).join('')}</span></span>`).join('')}</span>`;
+  const tracks=element.querySelectorAll('.slot-digit-track');
+  tracks.forEach((track,index)=>anime({
+    targets:track,
+    translateY:`-${Number(text[index])}em`,
+    duration:720+index*35,
+    delay:(tracks.length-index-1)*55,
+    easing:'easeOutCubic'
+  }));
+}
+
+const animatedElements=new WeakSet();
+
+function animateElementReveal(root,force=false){
+  const scope=root&&root.nodeType===1?root:document;
+  const elements=[...scope.querySelectorAll('*')].filter(element=>{
+    if(element.closest('.slot-number'))return false;
+    if(element.matches('[data-count-up],.chart-line,.chart-point,.gauge-progress,.pollen-bar-fill,.uv-bar-fill,.bar-fill'))return false;
+    if(!force&&animatedElements.has(element))return false;
+    animatedElements.add(element);
+    return true;
+  });
+  if(!elements.length)return;
+  if(window.anime){
+    anime({targets:elements,opacity:[0,1],translateY:[3,0],delay:anime.stagger(.65),duration:360,easing:'easeOutCubic'});
+    return;
+  }
+  elements.forEach((element,index)=>element.animate(
+    [{opacity:0,transform:'translateY(3px)'},{opacity:1,transform:'translateY(0)'}],
+    {duration:360,delay:index*.65,easing:'cubic-bezier(.33,1,.68,1)',fill:'both'}
+  ));
+}
+
+function animateVisuals(root=document,forceReveal=false){
+  if(document.body.classList.contains('animations-disabled'))return;
+
+  const scope = root && root.nodeType === 1 ? root : document;
+  animateElementReveal(scope,forceReveal);
+  if(!window.anime)return;
+
+  scope.querySelectorAll('[data-count-up]').forEach((element)=>{
+    if(element.dataset.animated === 'true')return;
+    element.dataset.animated = 'true';
+    animateDigits(element, element.dataset.countUp);
+  });
+
+  scope.querySelectorAll('.chart-line').forEach((line,index)=>{
+    line.style.strokeDasharray = '1';
+    line.style.strokeDashoffset = '1';
+    anime({
+      targets: line,
+      strokeDashoffset: [1, 0],
+      duration: 1200,
+      delay: index * 60,
+      easing: 'easeInOutSine'
+    });
+  });
+
+  scope.querySelectorAll('.chart-point').forEach((point,index)=>{
+    point.style.opacity = '0';
+    point.style.transform = 'scale(0.4)';
+    anime({
+      targets: point,
+      opacity: [0, 1],
+      scale: [0.4, 1],
+      delay: 260 + index * 45,
+      duration: 320,
+      easing: 'easeOutBack'
+    });
+  });
+
+  scope.querySelectorAll('.gauge-progress').forEach((gauge,index)=>{
+    const full = Number(gauge.dataset.gaugeCirc || 0);
+    const target = Number(gauge.dataset.gaugeOffset || full);
+    gauge.style.strokeDasharray = String(full);
+    gauge.style.strokeDashoffset = String(full);
+    anime({
+      targets: gauge,
+      strokeDashoffset: [full, target],
+      duration: 1000,
+      delay: index * 40,
+      easing: 'easeOutCubic'
+    });
+  });
+
+  scope.querySelectorAll('.pollen-bar-fill, .uv-bar-fill, .bar-fill').forEach((bar,index)=>{
+    bar.style.transformOrigin = 'left center';
+    bar.style.transform = 'scaleX(0)';
+    anime({
+      targets: bar,
+      scaleX: [0, 1],
+      duration: 800,
+      delay: 120 + index * 35,
+      easing: 'easeOutCubic'
+    });
+  });
+
+  scope.querySelectorAll('.uv-bar-fill').forEach((bar,index)=>{
+    bar.style.transformOrigin = 'bottom center';
+    bar.style.transform = 'scaleY(0)';
+    anime({
+      targets: bar,
+      scaleY: [0, 1],
+      duration: 640,
+      delay: 100 + index * 30,
+      easing: 'easeOutCubic'
+    });
+  });
 }
 
 function setActiveSidebarSection(id){
@@ -1531,11 +1656,11 @@ async function loadWeather(){
       const pts4=pressureVals.map((v,i)=>`${i*(svgW/3)},${svgH-((v-pMin)/pRange)*(svgH-8)+4}`).join(' ');
       const pressureSVG=`<svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="width:100%;height:60px">
         <defs><linearGradient id="pg" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#4caf50" stop-opacity="0.3"/><stop offset="100%" stop-color="#4caf50" stop-opacity="0"/></linearGradient></defs>
-        <polyline points="${pts4}" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linejoin="round"/>
-        ${pressureVals.map((v,i)=>`<circle cx="${i*(svgW/3)}" cy="${svgH-((v-pMin)/pRange)*(svgH-8)+4}" r="4" fill="#4caf50"/>`).join('')}
+        <polyline class="chart-line" points="${pts4}" pathLength="1" fill="none" stroke="#4caf50" stroke-width="2.5" stroke-linejoin="round"/>
+        ${pressureVals.map((v,i)=>`<circle class="chart-point" cx="${i*(svgW/3)}" cy="${svgH-((v-pMin)/pRange)*(svgH-8)+4}" r="4" fill="#4caf50"/>`).join('')}
       </svg>`;
       const pressureLabels=parts.map(p=>`<div style="flex:1;text-align:center;font-size:11px;color:var(--muted)">${p.name}</div>`).join('');
-      const pressureNums=pressureVals.map(v=>`<div style="flex:1;text-align:center;font-size:13px;font-weight:600;color:#4caf50">${v}</div>`).join('');
+      const pressureNums=pressureVals.map(v=>`<div data-count-up="${v}" style="flex:1;text-align:center;font-size:13px;font-weight:600;color:#4caf50">${v}</div>`).join('');
       const pressureNormMin=pressureNorm.min,pressureNormMax=pressureNorm.max;
 
       const humRows=parts.map(p=>`
@@ -1919,6 +2044,7 @@ async function loadWeather(){
       renderGeoDay('Послезавтра',kpSimD2);
     const kpNow=kpSimToday[Math.floor(curHour/3)];
     document.getElementById('pageGeomagStatus').textContent=kpLabel(kpNow);
+    scheduleAnimatedContent(document.getElementById('pageGeomagBody'));
     const kpGaugeSVG=`
       <div style="width:64px;height:64px;position:relative">
         <svg viewBox="0 0 64 64" style="transform:rotate(-90deg);width:64px;height:64px">
@@ -1947,6 +2073,7 @@ async function loadWeather(){
     }
     const uvHoursHTML=uvHours.join('');
     document.getElementById('uvHours').innerHTML=uvHoursHTML;
+    scheduleAnimatedContent(document.getElementById('pageUVBody'));
     const uvLevels=[
       {range:'0–2',label:'Низкий',color:'#4caf50',tip:'Можно находиться на улице без защиты'},
       {range:'3–5',label:'Умеренный',color:'#f5a623',tip:'Рекомендуется SPF 15+'},
@@ -2044,6 +2171,7 @@ async function loadWeather(){
         <div class="pollen-items" style="gap:14px">${pollenHTML}</div>
       </div>
       ${calHTML}`;
+    scheduleAnimatedContent(document.getElementById('pagePollenBody'));
 
     // --- DAY-BY-DAY ---
     const parts=[
@@ -2147,8 +2275,8 @@ async function loadWeather(){
     const svgH=80,svgW=600;
     const pPoints=pressureHours.map((x,i)=>`${i*(svgW/(pressureHours.length-1))},${svgH-((x.v-pMin)/pRange)*svgH}`).join(' ');
     const pressureChartSVG=`<svg viewBox="0 0 ${svgW} ${svgH}" preserveAspectRatio="none" style="width:100%;height:80px">
-      <polyline points="${pPoints}" fill="none" stroke="#4caf50" stroke-width="2.5"/>
-      ${pressureHours.map((x,i)=>`<circle cx="${i*(svgW/(pressureHours.length-1))}" cy="${svgH-((x.v-pMin)/pRange)*svgH}" r="3" fill="#4caf50"/>`).join('')}
+      <polyline class="chart-line" points="${pPoints}" pathLength="1" fill="none" stroke="#4caf50" stroke-width="2.5"/>
+      ${pressureHours.map((x,i)=>`<circle class="chart-point" cx="${i*(svgW/(pressureHours.length-1))}" cy="${svgH-((x.v-pMin)/pRange)*svgH}" r="3" fill="#4caf50"/>`).join('')}
     </svg>`;
     const pressureLabels=pressureHours.filter((_,i)=>i%3===0).map(x=>`<span style="flex:1;text-align:center;font-size:11px;color:var(--muted)">${x.t}:00</span>`).join('');
 
@@ -2192,6 +2320,7 @@ async function loadWeather(){
           <div class="detail-row"><span class="lbl">Облачность</span><span class="val">${cloudVal}</span></div>
         </div>
       </div>`;
+    scheduleAnimatedContent(document.getElementById('pageAtmoBody'));
 
     // Лунная страница
     const mp3=moonPhase();
@@ -2317,7 +2446,7 @@ async function loadWeather(){
     };
 
     renderMoonPage();
-    // убираем старый вызов ниже
+    scheduleAnimatedContent(document.getElementById('pageMoonBody'));
     document.getElementById('pageMoonBody').dataset.rendered='1';
     // Ветер страница
     const windDeg=c.wind_direction_10m;
@@ -2401,6 +2530,7 @@ async function loadWeather(){
         </div>`);
     }
     document.getElementById('page10daysBody').innerHTML=days10body.join('');
+    scheduleAnimatedContent(document.getElementById('page10daysBody'));
 
     document.getElementById('loadingState').classList.add('hidden');
     document.getElementById('allContent').classList.remove('hidden');
@@ -2455,6 +2585,7 @@ window.switchDayTab = function(tabId, el) {
   const content = document.getElementById('dayTabContent');
   if (content && window._dayHourlySlice) {
     content.innerHTML = window._dayTabRenderer(tabId, window._dayHourlySlice);
+    scheduleAnimatedContent(content);
   }
 };
 
@@ -2522,18 +2653,27 @@ function animateDashboard(){
   groups.forEach(({targets,...options})=>{
     if(document.querySelector(targets))anime({targets,easing:'easeOutCubic',...options});
   });
+
+  const root=document.getElementById('allContent');
+  if(root)requestAnimationFrame(()=>animateVisuals(root));
 }
 
 function hideStartupScreen(){
   document.getElementById('startupScreen')?.classList.add('is-hidden');
 }
 
+function scheduleAnimatedContent(root){
+  if(!root)return;
+  if(document.body.classList.contains('animations-disabled'))return;
+  requestAnimationFrame(()=>animateVisuals(root));
+}
+
 function openPage(id){
-  document.getElementById(id).classList.add('open');
+  const page=document.getElementById(id);
+  if(!page)return;
+  page.classList.add('open');
   document.body.style.overflow='hidden';
-  if(window.anime&&!document.body.classList.contains('animations-disabled')){
-    anime({targets:`#${id} .detail-page-body > *`,opacity:[0,1],translateY:[16,0],delay:anime.stagger(45),duration:420,easing:'easeOutCubic'});
-  }
+  if(!document.body.classList.contains('animations-disabled'))requestAnimationFrame(()=>animateVisuals(page,true));
 }
 function closePage(id){
   document.getElementById(id).classList.remove('open');
@@ -2561,6 +2701,19 @@ document.addEventListener('keydown',event=>{
   }
 });
 applyAppearance(readAppearance());
+
+const contentObserver=new MutationObserver(records=>{
+  const addedElements=new Set();
+  records.forEach(record=>record.addedNodes.forEach(node=>{
+    if(node.nodeType===1&&!node.closest('.slot-number'))addedElements.add(node);
+  }));
+  addedElements.forEach(scheduleAnimatedContent);
+});
+contentObserver.observe(document.querySelector('.layout'),{childList:true,subtree:true});
+window.addEventListener('load',()=>{
+  scheduleAnimatedContent(document.querySelector('.sidebar'));
+  scheduleAnimatedContent(document.querySelector('.topbar'));
+},{once:true});
 
 // ── FernieID ──
 var FID_API_KEY = 'fid_48919a000140bf6b7e7767281ffc31329647d6a5c133fe8f';
