@@ -675,7 +675,9 @@ h1,h2,h3,.logo,.sec-title,.detail-page-title,.profile-name,.settings-heading h2{
 .hourly-card,.forecast-card,.detail-card,.geomag-card,.pollen-card,.daybyday-card,.uv-card,.wb-card{background:var(--bg2);border-color:var(--border);box-shadow:0 12px 36px rgba(0,0,0,.12);backdrop-filter:blur(18px);}
 .hourly-card,.detail-card,.geomag-card,.pollen-card,.daybyday-card,.uv-card{padding:clamp(16px,2vw,24px);}
 .hour-col,.fc-day-col,.wb-card,.detail-card,.forecast-grid .fc-day-col,.geomag-bar,.back-btn{transition:background .24s ease,border-color .24s ease,transform .24s cubic-bezier(.2,.75,.25,1),box-shadow .24s ease;}
-.hour-col:hover,.fc-day-col:hover,.wb-card:hover,.detail-card:hover{transform:translateY(-3px);}.wb-card{min-height:104px;border-radius:20px;}
+.hour-col,.fc-day-col,.wb-card,.detail-card{position:relative;}
+.hour-col:hover,.fc-day-col:hover,.wb-card:hover,.detail-card:hover{z-index:2;transform:translateY(-3px);}
+.wb-card{min-height:104px;border-radius:20px;}
 .open-detail-card{cursor:pointer;}
 .open-detail-card:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
 .wb-card:hover{border-color:color-mix(in srgb,var(--accent) 35%,var(--border));box-shadow:0 14px 32px rgba(0,0,0,.18);}
