@@ -1270,7 +1270,17 @@ function sunProg(rise,set){
 function uvLabel(v){if(v<3)return'Низкий';if(v<6)return'Умеренный';if(v<8)return'Высокий';if(v<11)return'Очень высокий';return'Экстремальный';}
 function uvColor(v){if(v<3)return'#4caf50';if(v<6)return'#f5a623';if(v<8)return'#f08030';if(v<11)return'#e05555';return'#9333ea';}
 function uvSub(v){if(v<3)return'Защита не требуется';if(v<6)return'Используйте SPF';if(v<8)return'Нужна защита';if(v<11)return'Высокая защита';return'Оставайтесь в тени';}
-function pressureLabel(p){if(p>768)return{t:'выше нормы',c:'green'};if(p<740)return{t:'ниже нормы',c:'red'};return{t:'в норме',c:'green'};}
+function pressureNormAtElevation(elevation){
+  const altitude=Math.max(-500,Math.min(Number(elevation)||0,9000));
+  const pressureAtSeaLevel=1013.25*Math.pow(1-2.25577e-5*altitude,5.25588);
+  const center=Math.round(pressureAtSeaLevel*0.750064);
+  return{min:center-14,max:center+14,center};
+}
+function pressureLabel(value,norm){
+  if(value>norm.max)return{t:'выше нормы',c:'red'};
+  if(value<norm.min)return{t:'ниже нормы',c:'red'};
+  return{t:'в норме',c:'green'};
+}
 function kpLabel(k){if(k<=2)return'Спокойное';if(k<=4)return'Слабая буря';if(k<=6)return'Умеренная буря';if(k<=7)return'Сильная буря';return'Экстремальная буря';}
 function kpColor(k){if(k<=2)return'#666';if(k<=4)return'#4a3a10';return'#4a2010';}
 function kpTextColor(k){if(k<=2)return'rgba(255,255,255,0.4)';if(k<=4)return'#f5a623';return'#f08030';}
@@ -1367,6 +1377,7 @@ async function loadWeather(){
     const d=await r.json();
     const dAq=await rAq.json();
     const c=d.current;
+    const pressureNorm=pressureNormAtElevation(d.elevation??geo.elevation??0);
     const h=d.hourly;
     const daily=d.daily;
     const now=new Date();
@@ -1430,7 +1441,7 @@ async function loadWeather(){
 
     // --- WELLBEING ---
     const pressureNow=Math.round(c.surface_pressure*0.750064);
-    const pl=pressureLabel(pressureNow);
+    const pl=pressureLabel(pressureNow,pressureNorm);
     // --- POLLEN DATA (объявляем заранее, используется и в wellbeing, и ниже) ---
     const pollenData=[
       {name:'Берёза',   val:pollenRaw.birch,   level:pollenLevel(pollenRaw.birch)},
@@ -1525,7 +1536,7 @@ async function loadWeather(){
       </svg>`;
       const pressureLabels=parts.map(p=>`<div style="flex:1;text-align:center;font-size:11px;color:var(--muted)">${p.name}</div>`).join('');
       const pressureNums=pressureVals.map(v=>`<div style="flex:1;text-align:center;font-size:13px;font-weight:600;color:#4caf50">${v}</div>`).join('');
-      const pressureNormMin=748,pressureNormMax=760;
+      const pressureNormMin=pressureNorm.min,pressureNormMax=pressureNorm.max;
 
       const humRows=parts.map(p=>`
         <div style="flex:1;text-align:center;padding:10px 4px">
@@ -1614,7 +1625,7 @@ async function loadWeather(){
         const svgH2 = 48;
         const pPts = pressureHourly.map((v, ii) => `${ii * 64 + 32},${svgH2 - ((v - pMinH) / pRangeH) * (svgH2 - 8) + 4}`).join(' ');
         const pressureBlock = `<div style="margin-bottom:4px">
-          <div style="font-size:12px;font-weight:600;color:var(--muted);padding:10px 0 6px">Давление <span style="color:#4caf50;font-weight:400">норма 748–760 мм рт. ст.</span></div>
+          <div style="font-size:12px;font-weight:600;color:var(--muted);padding:10px 0 6px">Давление <span style="color:#4caf50;font-weight:400">норма ${pressureNormMin}–${pressureNormMax} мм рт. ст.</span></div>
           <div style="background:var(--bg3);border-radius:12px;padding:12px;overflow-x:auto">
             <svg viewBox="0 0 ${svgW2} ${svgH2}" style="width:${svgW2}px;height:${svgH2}px;min-width:100%">
               <polyline points="${pPts}" fill="none" stroke="#4caf50" stroke-width="2"/>
@@ -1778,7 +1789,7 @@ async function loadWeather(){
 
         <!-- PRESSURE BLOCK -->
         <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;margin-bottom:12px">
-          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px">Давление <span style="color:#4caf50;font-weight:400">норма 740–768 мм рт. ст.</span></div>
+          <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:4px">Давление <span style="color:#4caf50;font-weight:400">норма ${pressureNorm.min}–${pressureNorm.max} мм рт. ст.</span></div>
           <div style="display:flex;margin-bottom:4px;">${pressureLabels}</div>
           ${pressureSVG}
           <div style="display:flex;margin-top:4px;">${pressureNums}</div>
@@ -2102,8 +2113,8 @@ async function loadWeather(){
     // --- DETAIL CARDS ---
     const T=c.temperature_2m,RH=c.relative_humidity_2m;
     const dew=Math.round(T-((100-RH)/5));
-    const pl2=pressureLabel(pressureNow);
-    const pressureNormMin=740,pressureNormMax=768;
+    const pl2=pressureLabel(pressureNow,pressureNorm);
+    const pressureNormMin=pressureNorm.min,pressureNormMax=pressureNorm.max;
     const pressureStatus=pressureNow>pressureNormMax?'выше нормы':pressureNow<pressureNormMin?'ниже нормы':'в норме';
     const pressureColor=pressureNow>pressureNormMax?'#4da6ff':pressureNow<pressureNormMin?'#e05555':'#4caf50';
     const pressureVal=`<span style="color:${pressureColor}">${pressureNow} мм</span>`;
@@ -2495,7 +2506,22 @@ function closeSettings(){document.getElementById('settingsDialog').close();}
 
 function animateDashboard(){
   if(!window.anime||document.body.classList.contains('animations-disabled'))return;
-  anime({targets:'#allContent > *',opacity:[0,1],translateY:[14,0],delay:anime.stagger(55),duration:520,easing:'easeOutCubic'});
+  const groups=[
+    {targets:'#allContent > .hero-card',opacity:[0,1],translateY:[14,0],duration:600},
+    {targets:'#allContent > .alerts .alert-card',opacity:[0,1],translateX:[-10,0],delay:anime.stagger(80),duration:460},
+    {targets:'#hourlyList .hour-col',opacity:[0,1],translateY:[10,0],scale:[.94,1],delay:anime.stagger(32),duration:420},
+    {targets:'#wellbeingSection .wb-card',opacity:[0,1],translateY:[12,0],scale:[.96,1],delay:anime.stagger(65),duration:480},
+    {targets:'#forecastGrid .fc-day-col',opacity:[0,1],translateY:[9,0],delay:anime.stagger(38),duration:440},
+    {targets:'#geomagDays > div',opacity:[0,1],translateX:[12,0],delay:anime.stagger(75),duration:440},
+    {targets:'#geomagDays .geomag-bar',scaleY:[.2,1],delay:anime.stagger(24,{start:100}),duration:500},
+    {targets:'#uvHours .uv-hour-item',opacity:[0,1],translateY:[8,0],delay:anime.stagger(28),duration:400},
+    {targets:'#pollenItems .pollen-row',opacity:[0,1],translateX:[-12,0],delay:anime.stagger(70),duration:430},
+    {targets:'#dayByDay .daybyday-card',opacity:[0,1],translateY:[14,0],delay:anime.stagger(75),duration:500},
+    {targets:'#allContent > .detail-grid .detail-card',opacity:[0,1],translateY:[12,0],delay:anime.stagger(85),duration:460}
+  ];
+  groups.forEach(({targets,...options})=>{
+    if(document.querySelector(targets))anime({targets,easing:'easeOutCubic',...options});
+  });
 }
 
 function hideStartupScreen(){
